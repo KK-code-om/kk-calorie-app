@@ -306,3 +306,71 @@ body {
   overflow-x: hidden;
 }
 
+
+/* ===== HARD iPHONE FIX ===== */
+
+.app {
+  width: 100%;
+  max-width: 100%;
+}
+
+.date-row {
+  display: flex !important;
+  gap: 6px;
+  align-items: center;
+}
+
+.date-row button {
+  flex: 0 0 56px;
+  font-size: 22px;
+  padding: 10px 6px;
+}
+
+.date-row input {
+  flex: 1;
+  font-size: 18px;
+  padding: 10px;
+  min-width: 0;
+}
+
+/* tabs FIX */
+.tabs {
+  display: flex !important;
+  gap: 6px;
+}
+
+.tab {
+  flex: 1;
+  font-size: 14px;
+  padding: 10px 4px;
+  white-space: nowrap;
+}
+
+/* prevent overflow */
+* {
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* summary fix */
+.big-number {
+  font-size: 44px;
+}
+
+/* card padding */
+.card {
+  padding: 14px;
+}
+
+/* inputs smaller */
+input,
+select,
+button {
+  font-size: 16px;
+}
+
+/* ===== END FIX ===== */
+
