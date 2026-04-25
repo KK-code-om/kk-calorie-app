@@ -567,7 +567,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.1.3");
+  navigator.serviceWorker.register("service-worker.js?v=7.2.3");
 }
 
 render();
