@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V6 FINAL</title>
+  <title>KK Calories V7</title>
 
-  <link rel="stylesheet" href="style.css?v=6-final.3" />
-  <link rel="manifest" href="manifest.json?v=6-final.3" />
+  <link rel="stylesheet" href="style.css?v=7.3" />
+  <link rel="manifest" href="manifest.json?v=7.3" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -149,7 +149,15 @@
 </section>
 
       <section class="card">
-        <h2>Produktu DB</h2>
+        
+<section class="card">
+  <h2>🔍 Meklēt produktus (Open Food Facts)</h2>
+  <input id="offSearch" placeholder="piem: banana, rice, cheese" />
+  <button onclick="searchOFF()">Meklēt</button>
+  <div id="offResults"></div>
+</section>
+
+<h2>Produktu DB</h2>
         <input id="productSearch" placeholder="Meklēt produktu DB..." oninput="renderProducts()" />
         <div class="filter-row">
           <button type="button" id="productFavFilterBtn" onclick="toggleProductFavoritesFilter()">⭐ Tikai favorīti</button>
@@ -220,7 +228,7 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=6-final.3"></script>
+  <script src="app.js?v=7.3"></script>
 
 
 

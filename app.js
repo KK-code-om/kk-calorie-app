@@ -567,7 +567,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=6-final.3");
+  navigator.serviceWorker.register("service-worker.js?v=7.3");
 }
 
 render();
@@ -796,3 +796,74 @@ function renderProducts() {
 
 
 
+
+
+/* ===== V7 OPEN FOOD FACTS ===== */
+
+async function searchOFF() {
+  const q = document.getElementById("offSearch").value.trim();
+  const box = document.getElementById("offResults");
+
+  if (!q) return alert("Ievadi produktu");
+
+  box.innerHTML = "Meklē...";
+
+  try {
+    const res = await fetch("https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(q) + "&search_simple=1&action=process&json=1&page_size=20");
+    const data = await res.json();
+
+    box.innerHTML = "";
+
+    if (!data.products || data.products.length === 0) {
+      box.innerHTML = "<p>Nav rezultātu</p>";
+      return;
+    }
+
+    data.products.forEach(p => {
+      const name = p.product_name || p.generic_name || "Bez nosaukuma";
+      const n = p.nutriments || {};
+
+      const kcal = Math.round(n["energy-kcal_100g"] || n.energy_kcal_100g || 0);
+      const protein = +(n.proteins_100g || 0).toFixed(1);
+      const carbs = +(n.carbohydrates_100g || 0).toFixed(1);
+      const fat = +(n.fat_100g || 0).toFixed(1);
+
+      if (!kcal) return;
+
+      const div = document.createElement("div");
+      div.className = "food-item";
+
+      div.innerHTML = `
+        <strong>${name}</strong>
+        <small>${kcal} kcal | P:${protein} C:${carbs} F:${fat}</small>
+        <button onclick="addOFFProduct('${name}', ${kcal}, ${protein}, ${carbs}, ${fat})">+ Pievienot</button>
+      `;
+
+      box.appendChild(div);
+    });
+
+  } catch (e) {
+    box.innerHTML = "Kļūda API";
+  }
+}
+
+function addOFFProduct(name, kcal, protein, carbs, fat) {
+  const products = getProducts();
+
+  products.push({
+    id: Date.now(),
+    name,
+    kcal,
+    protein,
+    carbs,
+    fat,
+    favorite: false
+  });
+
+  saveProducts(products);
+  render();
+
+  alert("Pievienots: " + name);
+}
+
+/* ===== END V7 ===== */
