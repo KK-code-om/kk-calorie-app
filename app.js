@@ -33,8 +33,8 @@ function saveFoods(foods, date = currentDate) {
 }
 
 function getProducts() {
-  const saved = JSON.parse(localStorage.getItem("kk_products"));
-  return saved && saved.length ? saved : DEFAULT_PRODUCTS;
+  const saved = localStorage.getItem("kk_products");
+  return saved ? JSON.parse(saved) : [];
 }
 
 function saveProducts(products) {
