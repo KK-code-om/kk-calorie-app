@@ -465,44 +465,34 @@ function renderFoodList() {
   });
 }
 
+
 function renderProducts() {
+  const box = document.getElementById("productList");
+  if (!box) return;
+
   const products = getProducts();
 
-  ["portionFood", "rProduct"].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-
-    sel.innerHTML = "";
-
-    products.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      sel.appendChild(opt);
-    });
-  });
-
-  const list = document.getElementById("productList");
-  if (!list) return;
-
-  list.innerHTML = "";
+  box.innerHTML = "";
 
   if (!products.length) {
-    list.innerHTML = "<p>Produktu DB ir tukša.</p>";
+    box.innerHTML = "<p>Nav produktu.</p>";
     return;
   }
 
   products.forEach(p => {
     const div = document.createElement("div");
-    div.className = "quick-item";
+    div.className = "food-item";
+
     div.innerHTML = `
       <strong>${p.name}</strong>
-      <small>100g: ${p.kcal} kcal | P ${p.protein} | C ${p.carbs} | F ${p.fat}</small>
-      <button onclick="deleteProduct('${p.id}')">Dzēst</button>
+      <small>${p.kcal} kcal | P:${p.protein} C:${p.carbs} F:${p.fat}</small>
+      <button onclick="deleteProduct(${p.id})">Dzēst</button>
     `;
-    list.appendChild(div);
+
+    box.appendChild(div);
   });
 }
+
 
 function renderRecipes() {
   const recipes = getRecipes();
@@ -767,54 +757,34 @@ function renderQuickFoodPicker() {
   `).join("");
 }
 
+
 function renderProducts() {
   const box = document.getElementById("productList");
   if (!box) return;
 
-  const favBtn = document.getElementById("productFavFilterBtn");
-  if (favBtn) {
-    favBtn.classList.toggle("active-filter", showProductFavoritesOnly);
-  }
+  const products = getProducts();
 
-  const products = getFilteredProductsForDb();
-
-  const portion = document.getElementById("portionFood");
-  const rProduct = document.getElementById("rProduct");
-
-  if (portion) {
-    portion.innerHTML = getProducts()
-      .map(p => `<option value="${p.id}">${p.favorite ? "⭐ " : ""}${p.name}</option>`)
-      .join("");
-  }
-
-  if (rProduct) {
-    rProduct.innerHTML = getProducts()
-      .map(p => `<option value="${p.id}">${p.name}</option>`)
-      .join("");
-  }
-
-  renderQuickFoodPicker();
+  box.innerHTML = "";
 
   if (!products.length) {
-    box.innerHTML = `<p class="muted">Nav produktu.</p>`;
+    box.innerHTML = "<p>Nav produktu.</p>";
     return;
   }
 
-  box.innerHTML = products.map(p => `
-    <div class="product-row">
-      <button type="button" class="favorite-star" onclick="toggleFavorite(${JSON.stringify(p.id)})">
-        ${p.favorite ? "⭐" : "☆"}
-      </button>
+  products.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "food-item";
 
-      <div class="product-info">
-        <strong>${p.name}</strong>
-        <small>${Number(p.kcal || 0)} kcal / 100g · P ${Number(p.protein || 0)} · O ${Number(p.carbs || 0)} · T ${Number(p.fat || 0)}</small>
-      </div>
+    div.innerHTML = `
+      <strong>${p.name}</strong>
+      <small>${p.kcal} kcal | P:${p.protein} C:${p.carbs} F:${p.fat}</small>
+      <button onclick="deleteProduct(${p.id})">Dzēst</button>
+    `;
 
-      <button type="button" class="small-danger" onclick="deleteProduct(${JSON.stringify(p.id)})">Dzēst</button>
-    </div>
-  `).join("");
+    box.appendChild(div);
+  });
 }
+
 
 /* ===== END V5 ===== */
 
