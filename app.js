@@ -577,7 +577,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=5");
+  navigator.serviceWorker.register("service-worker.js?v=6");
 }
 
 render();
@@ -817,3 +817,109 @@ function renderProducts() {
 }
 
 /* ===== END V5 ===== */
+
+
+/* ===== KK CALORIE APP V6: CSV PRODUCT IMPORT ===== */
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    const next = line[i + 1];
+
+    if (ch === '"' && insideQuotes && next === '"') {
+      current += '"';
+      i++;
+    } else if (ch === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (ch === "," && !insideQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
+
+function toNumberCSV(v) {
+  return Number(String(v || "").replace(",", ".").trim()) || 0;
+}
+
+function importProductsCSV() {
+  const box = document.getElementById("csvImportBox");
+  if (!box) return alert("CSV logs nav atrasts.");
+
+  const raw = box.value.trim();
+  if (!raw) return alert("Ielīmē CSV datus.");
+
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if (lines.length < 2) return alert("CSV vajag header + vismaz 1 produktu.");
+
+  const header = parseCSVLine(lines[0]).map(x => x.toLowerCase());
+  const idx = {
+    name: header.indexOf("name"),
+    kcal: header.indexOf("kcal"),
+    protein: header.indexOf("protein"),
+    carbs: header.indexOf("carbs"),
+    fat: header.indexOf("fat")
+  };
+
+  if (idx.name < 0 || idx.kcal < 0 || idx.protein < 0 || idx.carbs < 0 || idx.fat < 0) {
+    return alert("CSV header jābūt: name,kcal,protein,carbs,fat");
+  }
+
+  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const line of lines.slice(1)) {
+    const cols = parseCSVLine(line);
+    const name = String(cols[idx.name] || "").trim();
+
+    if (!name) {
+      skipped++;
+      continue;
+    }
+
+    const item = {
+      name,
+      kcal: toNumberCSV(cols[idx.kcal]),
+      protein: toNumberCSV(cols[idx.protein]),
+      carbs: toNumberCSV(cols[idx.carbs]),
+      fat: toNumberCSV(cols[idx.fat])
+    };
+
+    const existingIndex = products.findIndex(p => normalizeText(p.name) === normalizeText(name));
+
+    if (existingIndex >= 0) {
+      products[existingIndex] = {
+        ...products[existingIndex],
+        ...item,
+        favorite: Boolean(products[existingIndex].favorite)
+      };
+      updated++;
+    } else {
+      products.push({
+        id: Date.now() + Math.random(),
+        ...item,
+        favorite: false
+      });
+      added++;
+    }
+  }
+
+  saveProducts(products);
+  box.value = "";
+  render();
+
+  alert(`CSV import OK.\nPievienoti: ${added}\nAtjaunoti: ${updated}\nIzlaisti: ${skipped}`);
+}
+
+/* ===== END V6 ===== */

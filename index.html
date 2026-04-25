@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V5</title>
+  <title>KK Calories V6</title>
 
-  <link rel="stylesheet" href="style.css?v=5" />
-  <link rel="manifest" href="manifest.json?v=5" />
+  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="manifest" href="manifest.json?v=6" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -141,6 +141,13 @@
       </section>
 
       <section class="card">
+        <h2>CSV import produktiem</h2>
+        <p class="muted">Kolonnas: name,kcal,protein,carbs,fat</p>
+        <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Vārīta ola,155,13,1.1,11"></textarea>
+        <button onclick="importProductsCSV()">Importēt CSV</button>
+      </section>
+
+      <section class="card">
         <h2>Produktu DB</h2>
         <input id="productSearch" placeholder="Meklēt produktu DB..." oninput="renderProducts()" />
         <div class="filter-row">
@@ -212,6 +219,6 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

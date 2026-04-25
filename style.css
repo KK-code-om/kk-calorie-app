@@ -396,3 +396,14 @@ h2 {
 }
 
 /* ===== END V5 ===== */
+
+
+/* ===== V6 CSV IMPORT ===== */
+
+#csvImportBox {
+  min-height: 160px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* ===== END V6 ===== */
