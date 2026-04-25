@@ -921,3 +921,70 @@ function addOFFProductByIndex(index) {
 }
 
 /* ===== END V7.3 ===== */
+
+
+/* ===== V7.1 QUICK ADD + FAVORITES ===== */
+
+function quickAddProduct(productId, grams = 100, meal = "snack") {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return;
+
+  const f = grams / 100;
+
+  addEntry({
+    name: `${p.name} ${grams}g`,
+    kcal: Math.round(p.kcal * f),
+    protein: +(p.protein * f).toFixed(1),
+    carbs: +(p.carbs * f).toFixed(1),
+    fat: +(p.fat * f).toFixed(1),
+    mealType: meal
+  });
+
+  if (typeof touchRecentFood === "function") {
+    touchRecentFood(productId);
+  }
+}
+
+function renderQuickFoodPicker() {
+  const box = document.getElementById("quickFoodList");
+  if (!box) return;
+
+  const searchEl = document.getElementById("foodSearch");
+  const search = searchEl ? String(searchEl.value || "").toLowerCase() : "";
+
+  let products = getProducts();
+
+  if (search) {
+    products = products.filter(p => (p.name || "").toLowerCase().includes(search));
+  }
+
+  const recent = JSON.parse(localStorage.getItem("kk_recent_foods") || "[]");
+
+  box.innerHTML = "";
+
+  products.slice(0, 6).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "quick-item";
+    div.innerHTML = `
+      <strong>${p.name}</strong>
+      <button onclick="quickAddProduct(${p.id},100)">+100g</button>
+    `;
+    box.appendChild(div);
+  });
+
+  recent.slice(0, 4).forEach(p => {
+    const div = document.createElement("div");
+    div.className = "quick-item";
+    div.innerHTML = `
+      ⏱ <strong>${p.name}</strong>
+      <button onclick="quickAddProduct(${p.id},100)">+100g</button>
+    `;
+    box.appendChild(div);
+  });
+}
+
+document.addEventListener("input", e => {
+  if (e.target && e.target.id === "foodSearch") {
+    renderQuickFoodPicker();
+  }
+});
