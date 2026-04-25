@@ -639,3 +639,9 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+
+function clearProductDatabase() {
+  if (!confirm("Dzēst visu produktu datubāzi?")) return;
+  localStorage.setItem("kk_products", JSON.stringify([]));
+  render();
+}
