@@ -577,7 +577,243 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=4");
+  navigator.serviceWorker.register("service-worker.js?v=5");
 }
 
 render();
+
+
+/* ===== KK CALORIE APP V5: SEARCH + FAVORITES + RECENT ===== */
+
+let showFavoritesOnly = false;
+let showProductFavoritesOnly = false;
+
+function normalizeText(v) {
+  return String(v || "").toLowerCase().trim();
+}
+
+function getRecentFoods() {
+  return JSON.parse(localStorage.getItem("kk_recent_foods")) || [];
+}
+
+function saveRecentFoods(items) {
+  localStorage.setItem("kk_recent_foods", JSON.stringify(items.slice(0, 12)));
+}
+
+function touchRecentFood(productId) {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return;
+
+  let items = getRecentFoods().filter(x => String(x.id) !== String(productId));
+  items.unshift({
+    id: p.id,
+    name: p.name,
+    kcal: p.kcal,
+    protein: p.protein,
+    carbs: p.carbs,
+    fat: p.fat
+  });
+
+  saveRecentFoods(items);
+}
+
+function toggleFavorite(productId) {
+  const products = getProducts().map(p => {
+    if (String(p.id) === String(productId)) {
+      return { ...p, favorite: !Boolean(p.favorite) };
+    }
+    return { ...p, favorite: Boolean(p.favorite) };
+  });
+
+  saveProducts(products);
+  render();
+}
+
+function toggleFavoritesFilter() {
+  showFavoritesOnly = !showFavoritesOnly;
+  renderQuickFoodPicker();
+}
+
+function toggleProductFavoritesFilter() {
+  showProductFavoritesOnly = !showProductFavoritesOnly;
+  renderProducts();
+}
+
+function clearFoodSearch() {
+  const el = document.getElementById("foodSearch");
+  if (el) el.value = "";
+  showFavoritesOnly = false;
+  renderQuickFoodPicker();
+}
+
+function clearProductSearch() {
+  const el = document.getElementById("productSearch");
+  if (el) el.value = "";
+  showProductFavoritesOnly = false;
+  renderProducts();
+}
+
+function getFilteredProductsForQuick() {
+  const q = normalizeText(document.getElementById("foodSearch")?.value);
+  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
+
+  if (showFavoritesOnly) {
+    products = products.filter(p => p.favorite);
+  }
+
+  if (q) {
+    products = products.filter(p => normalizeText(p.name).includes(q));
+  }
+
+  products.sort((a, b) => {
+    if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+    return normalizeText(a.name).localeCompare(normalizeText(b.name));
+  });
+
+  return products;
+}
+
+function getFilteredProductsForDb() {
+  const q = normalizeText(document.getElementById("productSearch")?.value);
+  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
+
+  if (showProductFavoritesOnly) {
+    products = products.filter(p => p.favorite);
+  }
+
+  if (q) {
+    products = products.filter(p => normalizeText(p.name).includes(q));
+  }
+
+  products.sort((a, b) => {
+    if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+    return normalizeText(a.name).localeCompare(normalizeText(b.name));
+  });
+
+  return products;
+}
+
+function quickAddProduct(productId, grams = null) {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return alert("Produkts nav atrasts.");
+
+  const input = prompt("Grami:", grams || "100");
+  const g = Number(String(input || "").replace(",", "."));
+  if (!g || g <= 0) return;
+
+  const meal = document.getElementById("portionMeal")?.value || "snack";
+  const f = g / 100;
+
+  addEntry({
+    name: `${p.name} ${g}g`,
+    kcal: Math.round(Number(p.kcal || 0) * f),
+    protein: +(Number(p.protein || 0) * f).toFixed(1),
+    carbs: +(Number(p.carbs || 0) * f).toFixed(1),
+    fat: +(Number(p.fat || 0) * f).toFixed(1),
+    mealType: meal
+  });
+
+  touchRecentFood(productId);
+}
+
+function renderRecentFoods() {
+  const box = document.getElementById("recentFoodsBox");
+  if (!box) return;
+
+  const items = getRecentFoods();
+  if (!items.length) {
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="recent-title">Nesen lietotie</div>
+    <div class="recent-row">
+      ${items.slice(0, 6).map(p => `
+        <button type="button" class="chip" onclick="quickAddProduct(${JSON.stringify(p.id)})">${p.name}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderQuickFoodPicker() {
+  const box = document.getElementById("quickFoodPicker");
+  const favBtn = document.getElementById("favFilterBtn");
+  if (!box) return;
+
+  if (favBtn) {
+    favBtn.classList.toggle("active-filter", showFavoritesOnly);
+  }
+
+  renderRecentFoods();
+
+  const products = getFilteredProductsForQuick().slice(0, 30);
+
+  if (!products.length) {
+    box.innerHTML = `<p class="muted">Nav atrastu produktu.</p>`;
+    return;
+  }
+
+  box.innerHTML = products.map(p => `
+    <div class="product-row">
+      <button type="button" class="favorite-star" onclick="toggleFavorite(${JSON.stringify(p.id)})">
+        ${p.favorite ? "⭐" : "☆"}
+      </button>
+      <button type="button" class="product-main-btn" onclick="quickAddProduct(${JSON.stringify(p.id)})">
+        <strong>${p.name}</strong>
+        <small>${Number(p.kcal || 0)} kcal / 100g · P ${Number(p.protein || 0)} · O ${Number(p.carbs || 0)} · T ${Number(p.fat || 0)}</small>
+      </button>
+    </div>
+  `).join("");
+}
+
+function renderProducts() {
+  const box = document.getElementById("productList");
+  if (!box) return;
+
+  const favBtn = document.getElementById("productFavFilterBtn");
+  if (favBtn) {
+    favBtn.classList.toggle("active-filter", showProductFavoritesOnly);
+  }
+
+  const products = getFilteredProductsForDb();
+
+  const portion = document.getElementById("portionFood");
+  const rProduct = document.getElementById("rProduct");
+
+  if (portion) {
+    portion.innerHTML = getProducts()
+      .map(p => `<option value="${p.id}">${p.favorite ? "⭐ " : ""}${p.name}</option>`)
+      .join("");
+  }
+
+  if (rProduct) {
+    rProduct.innerHTML = getProducts()
+      .map(p => `<option value="${p.id}">${p.name}</option>`)
+      .join("");
+  }
+
+  renderQuickFoodPicker();
+
+  if (!products.length) {
+    box.innerHTML = `<p class="muted">Nav produktu.</p>`;
+    return;
+  }
+
+  box.innerHTML = products.map(p => `
+    <div class="product-row">
+      <button type="button" class="favorite-star" onclick="toggleFavorite(${JSON.stringify(p.id)})">
+        ${p.favorite ? "⭐" : "☆"}
+      </button>
+
+      <div class="product-info">
+        <strong>${p.name}</strong>
+        <small>${Number(p.kcal || 0)} kcal / 100g · P ${Number(p.protein || 0)} · O ${Number(p.carbs || 0)} · T ${Number(p.fat || 0)}</small>
+      </div>
+
+      <button type="button" class="small-danger" onclick="deleteProduct(${JSON.stringify(p.id)})">Dzēst</button>
+    </div>
+  `).join("");
+}
+
+/* ===== END V5 ===== */

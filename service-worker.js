@@ -1,11 +1,11 @@
-const CACHE_NAME = "kk-calorie-app-v4";
+const CACHE_NAME = "kk-calorie-app-v5";
 
 const FILES_TO_CACHE = [
   "./",
-  "./index.html",
-  "./style.css?v=4",
-  "./app.js?v=4",
-  "./manifest.json?v=4",
+  "./index.html?v=5",
+  "./style.css?v=5",
+  "./app.js?v=5",
+  "./manifest.json?v=5",
   "./icon-192.png",
   "./icon-512.png"
 ];
@@ -20,7 +20,9 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(key => caches.delete(key)))
+      Promise.all(keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      }))
     )
   );
   self.clients.claim();
