@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V6.4</title>
+  <title>KK Calories V6.5</title>
 
-  <link rel="stylesheet" href="style.css?v=6.4.3" />
-  <link rel="manifest" href="manifest.json?v=6.4.3" />
+  <link rel="stylesheet" href="style.css?v=6.5.3" />
+  <link rel="manifest" href="manifest.json?v=6.5.3" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -144,7 +144,7 @@
         <h2>CSV import produktiem</h2>
         <p class="muted">Kolonnas: name,kcal,protein,carbs,fat</p>
         <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Vārīta ola,155,13,1.1,11"></textarea>
-        <button id="csvImportBtn" type="button">Importēt CSV</button>
+        <button id="csvImportBtn" type="button" onclick="kkInlineCsvImport()">Importēt CSV</button>
         <div id="csvImportStatus" class="import-status"></div>
       </section>
 
@@ -220,7 +220,7 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=6.4.3"></script>
+  <script src="app.js?v=6.5.3"></script>
 
 <script>
 (function () {
@@ -255,7 +255,9 @@
   }
 
   window.kkInlineCsvImport = function () {
-    var box = document.getElementById("csvImportBox");
+    try {
+      status("Import sākts...");
+      var box = document.getElementById("csvImportBox");
     if (!box) {
       alert("CSV lauks nav atrasts.");
       return;
@@ -341,6 +343,10 @@
     var msg = "CSV import OK. Pievienoti: " + added + ", Atjaunoti: " + updated + ", Izlaisti: " + skipped;
     status(msg);
     alert(msg);
+    } catch (err) {
+      status("KĻŪDA: " + err.message);
+      alert("CSV import kļūda: " + err.message);
+    }
   };
 
   document.addEventListener("DOMContentLoaded", function () {
