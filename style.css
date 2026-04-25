@@ -441,3 +441,32 @@ h2 {
 }
 
 /* ===== END V6.2 ===== */
+
+
+/* ===== V6 FINAL CSV IMPORT ===== */
+
+#csvImportBox {
+  display: block !important;
+  width: 100% !important;
+  min-height: 170px !important;
+  background: #ffffff !important;
+  color: #16202a !important;
+  border: 2px solid #d8dde3 !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  margin: 8px 0 10px !important;
+  font-family: monospace !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+}
+
+.import-status {
+  margin-top: 10px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  background: #f6f8fa !important;
+  color: #16202a !important;
+  font-weight: 700 !important;
+}
+
+/* ===== END V6 FINAL ===== */

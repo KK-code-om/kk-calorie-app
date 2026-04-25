@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V6.8</title>
+  <title>KK Calories V6 FINAL</title>
 
-  <link rel="stylesheet" href="style.css?v=6.8.3" />
-  <link rel="manifest" href="manifest.json?v=6.8.3" />
+  <link rel="stylesheet" href="style.css?v=6-final.3" />
+  <link rel="manifest" href="manifest.json?v=6-final.3" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -144,8 +144,8 @@
         <h2>CSV import produktiem</h2>
         <p class="muted">Kolonnas: name,kcal,protein,carbs,fat</p>
         <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Vārīta ola,155,13,1.1,11"></textarea>
-        <button id="csvImportBtn" type="button" onclick="kkCsvImportV68()">Importēt CSV</button>
-        <div id="csvImportStatus" class="import-status"></div>
+        <button id="csvImportBtn" type="button" onclick="kkCsvImportFinal()">Importēt CSV</button>
+        <div id="csvImportStatus" class="import-status">CSV import gatavs.</div>
 </section>
 
       <section class="card">
@@ -220,7 +220,10 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=6.8.3"></script>
+  <script src="app.js?v=6-final.3"></script>
+
+
+
 
 
 
@@ -229,127 +232,134 @@
 
 
 <script>
-function kkCsvImportV68() {
+function kkCsvImportFinal() {
   var statusBox = document.getElementById("csvImportStatus");
 
   function setStatus(msg) {
     if (statusBox) statusBox.textContent = msg;
   }
 
-  setStatus("Import sākts...");
-
-  var box = document.getElementById("csvImportBox");
-  if (!box) {
-    setStatus("Kļūda: CSV lauks nav atrasts.");
-    alert("CSV lauks nav atrasts.");
-    return;
-  }
-
-  var raw = box.value.trim();
-  if (!raw) {
-    setStatus("CSV lauks ir tukšs.");
-    alert("CSV lauks ir tukšs.");
-    return;
-  }
-
-  var lines = raw.split(/\r?\n/).map(function(x) {
-    return x.trim();
-  }).filter(function(x) {
-    return x.length > 0;
-  });
-
-  if (lines.length < 2) {
-    setStatus("CSV vajag header + vismaz 1 produktu.");
-    alert("CSV vajag header + vismaz 1 produktu.");
-    return;
-  }
-
-  var header = lines[0].split(",").map(function(x) {
-    return x.trim().toLowerCase();
-  });
-
-  var idxName = header.indexOf("name");
-  var idxKcal = header.indexOf("kcal");
-  var idxProtein = header.indexOf("protein");
-  var idxCarbs = header.indexOf("carbs");
-  var idxFat = header.indexOf("fat");
-
-  if (idxName < 0 || idxKcal < 0 || idxProtein < 0 || idxCarbs < 0 || idxFat < 0) {
-    setStatus("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
-    alert("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
-    return;
-  }
-
-  var products = [];
-
   try {
-    products = JSON.parse(localStorage.getItem("kk_products")) || [];
-  } catch(e) {
-    products = [];
-  }
+    setStatus("Import sākts...");
 
-  var added = 0;
-  var updated = 0;
-  var skipped = 0;
-
-  for (var i = 1; i < lines.length; i++) {
-    var cols = lines[i].split(",").map(function(x) {
-      return x.trim();
-    });
-
-    var name = cols[idxName];
-
-    if (!name) {
-      skipped++;
-      continue;
+    var box = document.getElementById("csvImportBox");
+    if (!box) {
+      setStatus("KĻŪDA: CSV lauks nav atrasts.");
+      alert("CSV lauks nav atrasts.");
+      return;
     }
 
-    var kcal = Number(cols[idxKcal] || 0);
-    var protein = Number(cols[idxProtein] || 0);
-    var carbs = Number(cols[idxCarbs] || 0);
-    var fat = Number(cols[idxFat] || 0);
+    var raw = box.value;
+    if (!raw || raw.trim().length === 0) {
+      setStatus("CSV lauks ir tukšs.");
+      alert("CSV lauks ir tukšs.");
+      return;
+    }
 
-    var found = -1;
+    var lines = raw.split(/\r?\n/);
+    var cleanLines = [];
 
-    for (var j = 0; j < products.length; j++) {
-      var existingName = String(products[j].name || "").toLowerCase().trim();
-      if (existingName === name.toLowerCase().trim()) {
-        found = j;
-        break;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (line.length > 0) cleanLines.push(line);
+    }
+
+    if (cleanLines.length < 2) {
+      setStatus("CSV vajag header + vismaz 1 produktu.");
+      alert("CSV vajag header + vismaz 1 produktu.");
+      return;
+    }
+
+    var header = cleanLines[0].split(",");
+    for (var h = 0; h < header.length; h++) {
+      header[h] = header[h].trim().toLowerCase();
+    }
+
+    var idxName = header.indexOf("name");
+    var idxKcal = header.indexOf("kcal");
+    var idxProtein = header.indexOf("protein");
+    var idxCarbs = header.indexOf("carbs");
+    var idxFat = header.indexOf("fat");
+
+    if (idxName < 0 || idxKcal < 0 || idxProtein < 0 || idxCarbs < 0 || idxFat < 0) {
+      setStatus("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+      alert("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+      return;
+    }
+
+    var productsRaw = localStorage.getItem("kk_products");
+    var products = [];
+
+    if (productsRaw) {
+      try {
+        products = JSON.parse(productsRaw);
+        if (!Array.isArray(products)) products = [];
+      } catch (e) {
+        products = [];
       }
     }
 
-    if (found >= 0) {
-      products[found].name = name;
-      products[found].kcal = kcal;
-      products[found].protein = protein;
-      products[found].carbs = carbs;
-      products[found].fat = fat;
-      products[found].favorite = Boolean(products[found].favorite);
-      updated++;
-    } else {
-      products.push({
-        id: Date.now() + Math.random(),
-        name: name,
-        kcal: kcal,
-        protein: protein,
-        carbs: carbs,
-        fat: fat,
-        favorite: false
-      });
-      added++;
+    var added = 0;
+    var updated = 0;
+    var skipped = 0;
+
+    for (var r = 1; r < cleanLines.length; r++) {
+      var cols = cleanLines[r].split(",");
+
+      var name = (cols[idxName] || "").trim();
+      if (!name) {
+        skipped++;
+        continue;
+      }
+
+      var kcal = Number((cols[idxKcal] || "0").trim()) || 0;
+      var protein = Number((cols[idxProtein] || "0").trim()) || 0;
+      var carbs = Number((cols[idxCarbs] || "0").trim()) || 0;
+      var fat = Number((cols[idxFat] || "0").trim()) || 0;
+
+      var foundIndex = -1;
+      for (var j = 0; j < products.length; j++) {
+        var existing = String(products[j].name || "").toLowerCase().trim();
+        if (existing === name.toLowerCase().trim()) {
+          foundIndex = j;
+          break;
+        }
+      }
+
+      if (foundIndex >= 0) {
+        products[foundIndex].name = name;
+        products[foundIndex].kcal = kcal;
+        products[foundIndex].protein = protein;
+        products[foundIndex].carbs = carbs;
+        products[foundIndex].fat = fat;
+        products[foundIndex].favorite = Boolean(products[foundIndex].favorite);
+        updated++;
+      } else {
+        products.push({
+          id: Date.now() + Math.random(),
+          name: name,
+          kcal: kcal,
+          protein: protein,
+          carbs: carbs,
+          fat: fat,
+          favorite: false
+        });
+        added++;
+      }
     }
+
+    localStorage.setItem("kk_products", JSON.stringify(products));
+
+    var msg = "CSV import OK. Pievienoti: " + added + ", Atjaunoti: " + updated + ", Izlaisti: " + skipped;
+    setStatus(msg);
+    alert(msg);
+
+    window.location.reload();
+
+  } catch (err) {
+    setStatus("KĻŪDA: " + err.message);
+    alert("CSV import kļūda: " + err.message);
   }
-
-  localStorage.setItem("kk_products", JSON.stringify(products));
-
-  if (typeof renderProducts === "function") {
-    renderProducts();
-  }
-
-  var msg = "CSV import OK. Pievienoti: " + added + ", Atjaunoti: " + updated + ", Izlaisti: " + skipped;
-  setStatus(msg);
-  alert(msg);
 }
 </script>
 
