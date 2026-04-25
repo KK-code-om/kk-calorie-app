@@ -374,3 +374,82 @@ button {
 
 /* ===== END FIX ===== */
 
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
+
+.app {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px;
+  overflow-x: hidden !important;
+}
+
+h1 {
+  font-size: 34px !important;
+}
+
+.date-row {
+  display: grid !important;
+  grid-template-columns: 52px minmax(0, 1fr) 52px !important;
+  gap: 6px !important;
+  width: 100%;
+}
+
+.date-row button {
+  width: 52px !important;
+  min-width: 52px !important;
+  padding: 10px 0 !important;
+  font-size: 22px !important;
+}
+
+.date-row input {
+  min-width: 0 !important;
+  width: 100% !important;
+  font-size: 17px !important;
+  padding: 10px 4px !important;
+  text-align: center;
+}
+
+.tabs {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  width: 100%;
+}
+
+.tab {
+  min-width: 0 !important;
+  width: 100% !important;
+  font-size: 13px !important;
+  padding: 10px 2px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card {
+  width: 100%;
+  max-width: 100%;
+  padding: 14px !important;
+}
+
+.big-number {
+  font-size: 44px !important;
+}
+
+.big-number small {
+  font-size: 18px !important;
+}
+
+.macro label {
+  font-size: 17px !important;
+}
+
+.status {
+  font-size: 17px !important;
+}
+
