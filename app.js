@@ -171,7 +171,8 @@ function renderIngredients() {
       <small>${ing.grams} g</small>
       <button onclick="removeIngredient(${index})">Dzēst</button>
     `;
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 }
 
@@ -408,7 +409,8 @@ function renderMealSummary() {
       </div>
       <strong>${Math.round(kcal)} kcal</strong>
     `;
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 }
 
@@ -489,7 +491,8 @@ function renderProducts() {
       <button onclick="deleteProduct(${p.id})">Dzēst</button>
     `;
 
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 }
 
@@ -781,7 +784,8 @@ function renderProducts() {
       <button onclick="deleteProduct(${p.id})">Dzēst</button>
     `;
 
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 }
 
@@ -880,7 +884,8 @@ async function searchOFF() {
         <button onclick="addOFFProductByIndex(${index})">+ Pievienot</button>
       `;
 
-      box.appendChild(div);
+      div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
     });
 
     if (!box.innerHTML.trim()) {
@@ -969,7 +974,8 @@ function renderQuickFoodPicker() {
       <strong>${p.name}</strong>
       <button onclick="quickAddProduct(${p.id},100)">+100g</button>
     `;
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 
   recent.slice(0, 4).forEach(p => {
@@ -979,7 +985,8 @@ function renderQuickFoodPicker() {
       ⏱ <strong>${p.name}</strong>
       <button onclick="quickAddProduct(${p.id},100)">+100g</button>
     `;
-    box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id,100);
+box.appendChild(div);
   });
 }
 
