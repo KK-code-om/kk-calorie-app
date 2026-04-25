@@ -567,7 +567,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.2.3");
+  navigator.serviceWorker.register("service-worker.js?v=7.3.3");
 }
 
 render();
@@ -801,7 +801,10 @@ function renderProducts() {
 
 
 
-/* ===== V7.1 OPEN FOOD FACTS STABLE SEARCH ===== */
+
+
+
+/* ===== V7.3 OPEN FOOD FACTS SAFE SEARCH ===== */
 
 let offResultsCache = [];
 
@@ -809,17 +812,24 @@ async function searchOFF() {
   const q = document.getElementById("offSearch").value.trim();
   const box = document.getElementById("offResults");
 
-  if (!q) return alert("Ievadi produktu");
+  if (!q) {
+    alert("Ievadi produktu");
+    return;
+  }
 
   box.innerHTML = "Meklē...";
 
-  try {
-    const url =
-      "https://world.openfoodfacts.org/api/v2/search?search_terms=" +
-      encodeURIComponent(q) +
-      "&fields=product_name,generic_name,brands,nutriments&page_size=20";
+  const url =
+    "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" +
+    encodeURIComponent(q) +
+    "&search_simple=1&action=process&json=1&page_size=20";
 
-    const res = await fetch(url);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store"
+    });
 
     if (!res.ok) {
       throw new Error("HTTP " + res.status);
@@ -830,14 +840,14 @@ async function searchOFF() {
 
     box.innerHTML = "";
 
-    if (!data.products || data.products.length === 0) {
+    if (!data.products || !data.products.length) {
       box.innerHTML = "<p>Nav rezultātu.</p>";
       return;
     }
 
     data.products.forEach(p => {
-      const name = p.product_name || p.generic_name || p.brands || "Bez nosaukuma";
       const n = p.nutriments || {};
+      const name = p.product_name || p.generic_name || p.brands || "Bez nosaukuma";
 
       const kcal = Math.round(
         n["energy-kcal_100g"] ||
@@ -864,7 +874,6 @@ async function searchOFF() {
 
       const div = document.createElement("div");
       div.className = "food-item";
-
       div.innerHTML = `
         <strong>${item.name}</strong>
         <small>${item.kcal} kcal | P:${item.protein} C:${item.carbs} F:${item.fat}</small>
@@ -875,17 +884,23 @@ async function searchOFF() {
     });
 
     if (!box.innerHTML.trim()) {
-      box.innerHTML = "<p>Rezultāti bija, bet bez kcal datiem.</p>";
+      box.innerHTML = "<p>Rezultāti bija, bet bez kcal / makro datiem.</p>";
     }
 
   } catch (e) {
-    box.innerHTML = "Kļūda API: " + e.message;
+    box.innerHTML = `
+      <p><b>Kļūda API:</b> ${e.message}</p>
+      <p class="muted">Atver šo testam: Open Food Facts var būt bloķēts pārlūkā vai service worker cache vēl nav nomainījies.</p>
+    `;
   }
 }
 
 function addOFFProductByIndex(index) {
   const item = offResultsCache[index];
-  if (!item) return alert("Produkts nav atrasts.");
+  if (!item) {
+    alert("Produkts nav atrasts.");
+    return;
+  }
 
   const products = getProducts();
 
@@ -905,4 +920,4 @@ function addOFFProductByIndex(index) {
   alert("Pievienots: " + item.name);
 }
 
-/* ===== END V7.1 ===== */
+/* ===== END V7.3 ===== */
