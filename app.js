@@ -577,7 +577,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=6");
+  navigator.serviceWorker.register("service-worker.js?v=6.2");
 }
 
 render();
@@ -923,3 +923,105 @@ function importProductsCSV() {
 }
 
 /* ===== END V6 ===== */
+
+
+/* ===== V6.2 CSV IMPORT HARD FIX ===== */
+
+function setCSVStatus(msg) {
+  const el = document.getElementById("csvImportStatus");
+  if (el) el.textContent = msg;
+}
+
+function importProductsCSV() {
+  const box = document.getElementById("csvImportBox");
+  if (!box) {
+    alert("CSV logs nav atrasts.");
+    return;
+  }
+
+  const raw = box.value.trim();
+  if (!raw) {
+    setCSVStatus("CSV lauks ir tukšs.");
+    alert("Ielīmē CSV datus.");
+    return;
+  }
+
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    setCSVStatus("CSV vajag header + vismaz 1 produktu.");
+    alert("CSV vajag header + vismaz 1 produktu.");
+    return;
+  }
+
+  const header = lines[0].split(",").map(x => x.trim().toLowerCase());
+
+  const need = ["name", "kcal", "protein", "carbs", "fat"];
+  const ok = need.every(x => header.includes(x));
+
+  if (!ok) {
+    setCSVStatus("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+    alert("CSV header jābūt: name,kcal,protein,carbs,fat");
+    return;
+  }
+
+  const idx = {
+    name: header.indexOf("name"),
+    kcal: header.indexOf("kcal"),
+    protein: header.indexOf("protein"),
+    carbs: header.indexOf("carbs"),
+    fat: header.indexOf("fat")
+  };
+
+  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const line of lines.slice(1)) {
+    const cols = line.split(",").map(x => x.trim());
+    const name = cols[idx.name];
+
+    if (!name) {
+      skipped++;
+      continue;
+    }
+
+    const item = {
+      name,
+      kcal: Number(String(cols[idx.kcal] || "0").replace(",", ".")) || 0,
+      protein: Number(String(cols[idx.protein] || "0").replace(",", ".")) || 0,
+      carbs: Number(String(cols[idx.carbs] || "0").replace(",", ".")) || 0,
+      fat: Number(String(cols[idx.fat] || "0").replace(",", ".")) || 0
+    };
+
+    const existingIndex = products.findIndex(p =>
+      String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim()
+    );
+
+    if (existingIndex >= 0) {
+      products[existingIndex] = {
+        ...products[existingIndex],
+        ...item,
+        favorite: Boolean(products[existingIndex].favorite)
+      };
+      updated++;
+    } else {
+      products.push({
+        id: Date.now() + Math.random(),
+        ...item,
+        favorite: false
+      });
+      added++;
+    }
+  }
+
+  saveProducts(products);
+  box.value = "";
+  render();
+
+  const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
+  setCSVStatus(msg);
+  alert(msg);
+}
+
+/* ===== END V6.2 ===== */
