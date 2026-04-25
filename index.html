@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KK Calorie App</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="KK Calories" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+</head>
+<body>
+  <main class="app">
+    <h1>KK Calorie App</h1>
+
+    <section class="card summary">
+      <h2>Šodien</h2>
+      <div class="grid">
+        <div><strong id="totalKcal">0</strong><span>kcal</span></div>
+        <div><strong id="remainingKcal">1910</strong><span>atlikums</span></div>
+        <div><strong id="totalProtein">0</strong><span>proteīns</span></div>
+        <div><strong id="totalCarbs">0</strong><span>ogļhidrāti</span></div>
+        <div><strong id="totalFat">0</strong><span>tauki</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Pievienot ēdienu</h2>
+      <input id="foodName" placeholder="Ēdiens" />
+      <input id="kcal" type="number" placeholder="kcal" />
+      <input id="protein" type="number" step="0.1" placeholder="Proteīns g" />
+      <input id="carbs" type="number" step="0.1" placeholder="Ogļhidrāti g" />
+      <input id="fat" type="number" step="0.1" placeholder="Tauki g" />
+
+      <select id="mealType">
+        <option value="breakfast">Brokastis</option>
+        <option value="lunch">Pusdienas</option>
+        <option value="dinner">Vakariņas</option>
+        <option value="snack">Uzkoda</option>
+      </select>
+
+      <button onclick="addFood()">Pievienot</button>
+      <button class="secondary" onclick="addKKCoffee()">+ KK kafija</button>
+    </section>
+
+    <section class="card">
+      <h2>Svars</h2>
+      <input id="weightInput" type="number" step="0.1" placeholder="Svars kg" />
+      <button onclick="saveWeight()">Saglabāt svaru</button>
+      <p id="lastWeight"></p>
+    </section>
+
+    <section class="card">
+      <h2>Ieraksti</h2>
+      <div id="foodList"></div>
+      <button class="danger" onclick="resetToday()">Reset today</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
