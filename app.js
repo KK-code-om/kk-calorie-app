@@ -577,7 +577,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=6.2");
+  navigator.serviceWorker.register("service-worker.js?v=6.3.3");
 }
 
 render();
@@ -1025,3 +1025,116 @@ function importProductsCSV() {
 }
 
 /* ===== END V6.2 ===== */
+
+
+/* ===== V6.3 CSV BUTTON HARD BIND ===== */
+
+function kkCsvSetStatus(msg) {
+  const el = document.getElementById("csvImportStatus");
+  if (el) el.textContent = msg;
+}
+
+function kkCsvImportProducts() {
+  const box = document.getElementById("csvImportBox");
+
+  if (!box) {
+    alert("Kļūda: csvImportBox nav atrasts.");
+    return;
+  }
+
+  const raw = box.value.trim();
+
+  if (!raw) {
+    kkCsvSetStatus("CSV lauks ir tukšs.");
+    alert("CSV lauks ir tukšs.");
+    return;
+  }
+
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+
+  if (lines.length < 2) {
+    kkCsvSetStatus("CSV vajag header + vismaz 1 produktu.");
+    alert("CSV vajag header + vismaz 1 produktu.");
+    return;
+  }
+
+  const header = lines[0].split(",").map(x => x.trim().toLowerCase());
+
+  const required = ["name", "kcal", "protein", "carbs", "fat"];
+  const valid = required.every(x => header.includes(x));
+
+  if (!valid) {
+    kkCsvSetStatus("Nepareizs CSV header.");
+    alert("CSV header jābūt: name,kcal,protein,carbs,fat");
+    return;
+  }
+
+  const idx = {
+    name: header.indexOf("name"),
+    kcal: header.indexOf("kcal"),
+    protein: header.indexOf("protein"),
+    carbs: header.indexOf("carbs"),
+    fat: header.indexOf("fat")
+  };
+
+  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
+
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  for (const line of lines.slice(1)) {
+    const cols = line.split(",").map(x => x.trim());
+    const name = cols[idx.name];
+
+    if (!name) {
+      skipped++;
+      continue;
+    }
+
+    const item = {
+      name,
+      kcal: Number(cols[idx.kcal]) || 0,
+      protein: Number(cols[idx.protein]) || 0,
+      carbs: Number(cols[idx.carbs]) || 0,
+      fat: Number(cols[idx.fat]) || 0
+    };
+
+    const found = products.findIndex(p =>
+      String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim()
+    );
+
+    if (found >= 0) {
+      products[found] = {
+        ...products[found],
+        ...item,
+        favorite: Boolean(products[found].favorite)
+      };
+      updated++;
+    } else {
+      products.push({
+        id: Date.now() + Math.random(),
+        ...item,
+        favorite: false
+      });
+      added++;
+    }
+  }
+
+  saveProducts(products);
+  render();
+
+  const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
+  kkCsvSetStatus(msg);
+  alert(msg);
+}
+
+window.importProductsCSV = kkCsvImportProducts;
+
+document.addEventListener("click", function(e) {
+  if (e.target && e.target.id === "csvImportBtn") {
+    kkCsvImportProducts();
+  }
+});
+
+/* ===== END V6.3 ===== */
