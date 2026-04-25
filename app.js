@@ -567,7 +567,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.3");
+  navigator.serviceWorker.register("service-worker.js?v=7.1.3");
 }
 
 render();
@@ -798,7 +798,12 @@ function renderProducts() {
 
 
 
-/* ===== V7 OPEN FOOD FACTS ===== */
+
+
+
+/* ===== V7.1 OPEN FOOD FACTS STABLE SEARCH ===== */
+
+let offResultsCache = [];
 
 async function searchOFF() {
   const q = document.getElementById("offSearch").value.trim();
@@ -809,61 +814,95 @@ async function searchOFF() {
   box.innerHTML = "Meklē...";
 
   try {
-    const res = await fetch("https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(q) + "&search_simple=1&action=process&json=1&page_size=20");
+    const url =
+      "https://world.openfoodfacts.org/api/v2/search?search_terms=" +
+      encodeURIComponent(q) +
+      "&fields=product_name,generic_name,brands,nutriments&page_size=20";
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error("HTTP " + res.status);
+    }
+
     const data = await res.json();
+    offResultsCache = [];
 
     box.innerHTML = "";
 
     if (!data.products || data.products.length === 0) {
-      box.innerHTML = "<p>Nav rezultātu</p>";
+      box.innerHTML = "<p>Nav rezultātu.</p>";
       return;
     }
 
     data.products.forEach(p => {
-      const name = p.product_name || p.generic_name || "Bez nosaukuma";
+      const name = p.product_name || p.generic_name || p.brands || "Bez nosaukuma";
       const n = p.nutriments || {};
 
-      const kcal = Math.round(n["energy-kcal_100g"] || n.energy_kcal_100g || 0);
-      const protein = +(n.proteins_100g || 0).toFixed(1);
-      const carbs = +(n.carbohydrates_100g || 0).toFixed(1);
-      const fat = +(n.fat_100g || 0).toFixed(1);
+      const kcal = Math.round(
+        n["energy-kcal_100g"] ||
+        n["energy-kcal"] ||
+        n.energy_kcal_100g ||
+        0
+      );
 
-      if (!kcal) return;
+      const protein = Number(n.proteins_100g || 0);
+      const carbs = Number(n.carbohydrates_100g || 0);
+      const fat = Number(n.fat_100g || 0);
+
+      if (!name || !kcal) return;
+
+      const item = {
+        name,
+        kcal,
+        protein: +protein.toFixed(1),
+        carbs: +carbs.toFixed(1),
+        fat: +fat.toFixed(1)
+      };
+
+      const index = offResultsCache.push(item) - 1;
 
       const div = document.createElement("div");
       div.className = "food-item";
 
       div.innerHTML = `
-        <strong>${name}</strong>
-        <small>${kcal} kcal | P:${protein} C:${carbs} F:${fat}</small>
-        <button onclick="addOFFProduct('${name}', ${kcal}, ${protein}, ${carbs}, ${fat})">+ Pievienot</button>
+        <strong>${item.name}</strong>
+        <small>${item.kcal} kcal | P:${item.protein} C:${item.carbs} F:${item.fat}</small>
+        <button onclick="addOFFProductByIndex(${index})">+ Pievienot</button>
       `;
 
       box.appendChild(div);
     });
 
+    if (!box.innerHTML.trim()) {
+      box.innerHTML = "<p>Rezultāti bija, bet bez kcal datiem.</p>";
+    }
+
   } catch (e) {
-    box.innerHTML = "Kļūda API";
+    box.innerHTML = "Kļūda API: " + e.message;
   }
 }
 
-function addOFFProduct(name, kcal, protein, carbs, fat) {
+function addOFFProductByIndex(index) {
+  const item = offResultsCache[index];
+  if (!item) return alert("Produkts nav atrasts.");
+
   const products = getProducts();
 
   products.push({
     id: Date.now(),
-    name,
-    kcal,
-    protein,
-    carbs,
-    fat,
+    name: item.name,
+    kcal: item.kcal,
+    protein: item.protein,
+    carbs: item.carbs,
+    fat: item.fat,
     favorite: false
   });
 
   saveProducts(products);
   render();
 
-  alert("Pievienots: " + name);
+  alert("Pievienots: " + item.name);
 }
 
-/* ===== END V7 ===== */
+/* ===== END V7.1 ===== */
