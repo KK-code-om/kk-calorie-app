@@ -1,17 +1,10 @@
 const DEFAULT_SETTINGS = {
-  kcal: 1910,
+  kcal: 1900,
   protein: 130,
   carbs: 190,
   fat: 70,
-  water: 2500
+  water: 2000
 };
-
-const DEFAULT_PRODUCTS = [
-  { id: "kk-coffee", name: "KK kafija", kcal: 40, protein: 1.3, carbs: 6.5, fat: 1 },
-  { id: "banana", name: "Banāns", kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 },
-  { id: "egg", name: "Ola", kcal: 155, protein: 13, carbs: 1.1, fat: 11 },
-  { id: "chicken", name: "Vistas fileja", kcal: 165, protein: 31, carbs: 0, fat: 3.6 }
-];
 
 let currentDate = new Date().toISOString().slice(0, 10);
 let currentIngredients = [];
@@ -49,19 +42,13 @@ function saveRecipes(recipes) {
   localStorage.setItem("kk_recipes", JSON.stringify(recipes));
 }
 
-function getTemplates() {
-  return JSON.parse(localStorage.getItem("kk_templates")) || [];
-}
-
-function saveTemplates(t) {
-  localStorage.setItem("kk_templates", JSON.stringify(t));
-}
-
 function showTab(tab) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active-screen"));
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
+
   document.getElementById(tab).classList.add("active-screen");
   document.getElementById("tab-" + tab).classList.add("active");
+
   render();
 }
 
@@ -79,7 +66,7 @@ function setDateFromPicker() {
 
 function addEntry(entry) {
   const foods = getFoods();
-  foods.push({ id: Date.now(), ...entry });
+  foods.push({ id: Date.now() + Math.random(), ...entry });
   saveFoods(foods);
   render();
 }
@@ -91,42 +78,29 @@ function addManualFood() {
     protein: Number(document.getElementById("protein").value) || 0,
     carbs: Number(document.getElementById("carbs").value) || 0,
     fat: Number(document.getElementById("fat").value) || 0,
-    mealType: document.getElementById("mealType").value
+    mealType: "snack"
   });
 
   ["foodName", "kcal", "protein", "carbs", "fat"].forEach(id => document.getElementById(id).value = "");
 }
 
-function addQuickFood(id) {
-  const p = getProducts().find(x => x.id == id);
-  if (!p) return;
-
-  addEntry({
-    name: p.name,
-    kcal: p.kcal,
-    protein: p.protein,
-    carbs: p.carbs,
-    fat: p.fat,
-    mealType: "snack"
-  });
-}
-
 function addPortionFood() {
   const id = document.getElementById("portionFood").value;
   const grams = Number(document.getElementById("portionGrams").value);
-  const p = getProducts().find(x => x.id == id);
+  const meal = document.getElementById("portionMeal").value;
+  const p = getProducts().find(x => String(x.id) === String(id));
 
   if (!p || !grams) return alert("Izvēlies produktu un ievadi gramus.");
 
-  const factor = grams / 100;
+  const f = grams / 100;
 
   addEntry({
     name: `${p.name} ${grams}g`,
-    kcal: Math.round(p.kcal * factor),
-    protein: +(p.protein * factor).toFixed(1),
-    carbs: +(p.carbs * factor).toFixed(1),
-    fat: +(p.fat * factor).toFixed(1),
-    mealType: document.getElementById("portionMeal").value
+    kcal: Math.round(p.kcal * f),
+    protein: +(p.protein * f).toFixed(1),
+    carbs: +(p.carbs * f).toFixed(1),
+    fat: +(p.fat * f).toFixed(1),
+    mealType: meal
   });
 
   document.getElementById("portionGrams").value = "";
@@ -134,7 +108,7 @@ function addPortionFood() {
 
 function deleteFood(id) {
   if (!confirm("Dzēst ierakstu?")) return;
-  saveFoods(getFoods().filter(f => f.id !== id));
+  saveFoods(getFoods().filter(f => String(f.id) !== String(id)));
   render();
 }
 
@@ -149,6 +123,7 @@ function saveProduct() {
   if (!name) return alert("Ievadi nosaukumu.");
 
   const products = getProducts();
+
   products.push({
     id: Date.now(),
     name,
@@ -159,20 +134,21 @@ function saveProduct() {
   });
 
   saveProducts(products);
+
   ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
   render();
 }
 
 function deleteProduct(id) {
   if (!confirm("Dzēst produktu?")) return;
-  saveProducts(getProducts().filter(p => p.id != id));
+  saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
   render();
 }
 
 function addIngredient() {
   const id = document.getElementById("rProduct").value;
   const grams = Number(document.getElementById("rGrams").value);
-  const p = getProducts().find(x => x.id == id);
+  const p = getProducts().find(x => String(x.id) === String(id));
 
   if (!p || !grams) return alert("Izvēlies produktu un gramus.");
 
@@ -184,6 +160,7 @@ function addIngredient() {
 function renderIngredients() {
   const box = document.getElementById("ingredientList");
   if (!box) return;
+
   box.innerHTML = "";
 
   currentIngredients.forEach((ing, index) => {
@@ -208,8 +185,9 @@ function calculateRecipeTotals(recipe) {
   const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
 
   recipe.ingredients.forEach(ing => {
-    const p = products.find(x => x.id == ing.productId);
+    const p = products.find(x => String(x.id) === String(ing.productId));
     if (!p) return;
+
     const f = ing.grams / 100;
     totals.kcal += p.kcal * f;
     totals.protein += p.protein * f;
@@ -230,10 +208,11 @@ function saveRecipe() {
   const yieldGrams = Number(document.getElementById("rYield").value);
 
   if (!name || !yieldGrams || currentIngredients.length === 0) {
-    return alert("Vajag nosaukumu, kopējo svaru un sastāvdaļas.");
+    return alert("Vajag nosaukumu, gatavo svaru un sastāvdaļas.");
   }
 
   const recipes = getRecipes();
+
   recipes.push({
     id: Date.now(),
     name,
@@ -251,14 +230,14 @@ function saveRecipe() {
 
 function deleteRecipe(id) {
   if (!confirm("Dzēst recepti?")) return;
-  saveRecipes(getRecipes().filter(r => r.id != id));
+  saveRecipes(getRecipes().filter(r => String(r.id) !== String(id)));
   render();
 }
 
 function addRecipePortion() {
   const id = document.getElementById("recipeSelectToday").value;
   const grams = Number(document.getElementById("recipeConsumedGrams").value);
-  const r = getRecipes().find(x => x.id == id);
+  const r = getRecipes().find(x => String(x.id) === String(id));
 
   if (!r || !grams) return alert("Izvēlies recepti un gramus.");
 
@@ -271,51 +250,10 @@ function addRecipePortion() {
     protein: +(totals.protein * f).toFixed(1),
     carbs: +(totals.carbs * f).toFixed(1),
     fat: +(totals.fat * f).toFixed(1),
-    mealType: document.getElementById("recipeMealToday").value
+    mealType: "dinner"
   });
 
   document.getElementById("recipeConsumedGrams").value = "";
-}
-
-function saveTodayAsTemplate() {
-  const foods = getFoods();
-  if (!foods.length) return alert("Šodien nav ierakstu.");
-
-  const name = prompt("Template nosaukums:");
-  if (!name) return;
-
-  const templates = getTemplates();
-  templates.push({
-    id: Date.now(),
-    name,
-    foods: foods.map(f => ({
-      name: f.name,
-      kcal: f.kcal,
-      protein: f.protein,
-      carbs: f.carbs,
-      fat: f.fat,
-      mealType: f.mealType
-    }))
-  });
-
-  saveTemplates(templates);
-  render();
-}
-
-function applyTemplate(id) {
-  const t = getTemplates().find(x => x.id == id);
-  if (!t) return;
-
-  const foods = getFoods();
-  t.foods.forEach(f => foods.push({ id: Date.now() + Math.random(), ...f }));
-  saveFoods(foods);
-  render();
-}
-
-function deleteTemplate(id) {
-  if (!confirm("Dzēst template?")) return;
-  saveTemplates(getTemplates().filter(t => t.id != id));
-  render();
 }
 
 function saveWeight() {
@@ -329,12 +267,6 @@ function saveWeight() {
 
   localStorage.setItem("weights", JSON.stringify(weights));
   document.getElementById("weightInput").value = "";
-  render();
-}
-
-function deleteWeight(date) {
-  if (!confirm("Dzēst svaru?")) return;
-  localStorage.setItem("weights", JSON.stringify((JSON.parse(localStorage.getItem("weights")) || []).filter(w => w.date !== date)));
   render();
 }
 
@@ -354,9 +286,13 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
+
   Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") data[k] = localStorage.getItem(k);
+    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") {
+      data[k] = localStorage.getItem(k);
+    }
   });
+
   document.getElementById("backupBox").value = JSON.stringify(data, null, 2);
 }
 
@@ -371,60 +307,143 @@ function importData() {
   }
 }
 
-function resetAllData() {
-  if (!confirm("Dzēst VISUS datus?")) return;
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") localStorage.removeItem(k);
-  });
-  render();
+function exportCSV() {
+  const rows = [["date", "meal", "food", "kcal", "protein", "carbs", "fat"]];
+
+  Object.keys(localStorage)
+    .filter(k => k.startsWith("foods_"))
+    .sort()
+    .forEach(k => {
+      const date = k.replace("foods_", "");
+      const foods = JSON.parse(localStorage.getItem(k)) || [];
+      foods.forEach(f => {
+        rows.push([
+          date,
+          f.mealType || "",
+          f.name || "",
+          f.kcal || 0,
+          f.protein || 0,
+          f.carbs || 0,
+          f.fat || 0
+        ]);
+      });
+    });
+
+  document.getElementById("backupBox").value = rows.map(r => r.join(",")).join("\n");
+}
+
+function getTotals(date = currentDate) {
+  return getFoods(date).reduce((a, f) => {
+    a.kcal += Number(f.kcal) || 0;
+    a.protein += Number(f.protein) || 0;
+    a.carbs += Number(f.carbs) || 0;
+    a.fat += Number(f.fat) || 0;
+    return a;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 }
 
 function percent(v, target) {
+  if (!target) return 0;
   return Math.min(100, Math.round((v / target) * 100));
 }
 
-function renderSummary() {
-  const s = getSettings();
-  const foods = getFoods();
+function getLast7Dates() {
+  const dates = [];
+  const base = new Date(currentDate);
 
-  const t = foods.reduce((a, f) => {
-    a.kcal += f.kcal;
-    a.protein += f.protein;
-    a.carbs += f.carbs;
-    a.fat += f.fat;
-    return a;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(base);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+
+  return dates;
+}
+
+function renderOverview() {
+  const s = getSettings();
+  const t = getTotals();
+
+  document.getElementById("datePicker").value = currentDate;
+  document.getElementById("dateLabel").textContent = currentDate;
 
   document.getElementById("totalKcal").textContent = Math.round(t.kcal);
   document.getElementById("targetKcal").textContent = s.kcal;
   document.getElementById("remainingKcal").textContent = Math.round(s.kcal - t.kcal);
 
-  document.getElementById("proteinText").textContent = `${t.protein.toFixed(1)} / ${s.protein} g`;
-  document.getElementById("carbsText").textContent = `${t.carbs.toFixed(1)} / ${s.carbs} g`;
-  document.getElementById("fatText").textContent = `${t.fat.toFixed(1)} / ${s.fat} g`;
+  document.querySelector(".gauge").style.setProperty("--p", percent(t.kcal, s.kcal) + "%");
 
-  document.getElementById("kcalBar").style.width = percent(t.kcal, s.kcal) + "%";
-  document.getElementById("proteinBar").style.width = percent(t.protein, s.protein) + "%";
-  document.getElementById("carbsBar").style.width = percent(t.carbs, s.carbs) + "%";
-  document.getElementById("fatBar").style.width = percent(t.fat, s.fat) + "%";
+  document.getElementById("kcalMini").textContent = Math.round(t.kcal);
+  document.getElementById("proteinMini").textContent = t.protein.toFixed(1) + " g";
+  document.getElementById("carbsMini").textContent = t.carbs.toFixed(1) + " g";
+  document.getElementById("fatMini").textContent = t.fat.toFixed(1) + " g";
 
-  const status = document.getElementById("dailyStatus");
-  status.className = "status";
+  renderMealSummary();
+  renderAnalytics();
+}
 
-  if (t.kcal <= s.kcal && t.protein >= s.protein) {
-    status.textContent = "Labi: kcal kontrolē + proteīns sasniegts";
-    status.classList.add("good");
-  } else if (t.kcal <= s.kcal) {
-    status.textContent = "OK: kcal kontrolē, proteīns vēl jāpaceļ";
-    status.classList.add("warn");
-  } else {
-    status.textContent = "Pāri kcal mērķim";
-    status.classList.add("bad");
+function renderMealSummary() {
+  const meals = [
+    ["breakfast", "Brokastis"],
+    ["lunch", "Pusdienas"],
+    ["dinner", "Vakariņas"],
+    ["snack", "Uzkodas"]
+  ];
+
+  const foods = getFoods();
+  const box = document.getElementById("mealSummary");
+  box.innerHTML = "";
+
+  meals.forEach(([key, label]) => {
+    const kcal = foods
+      .filter(f => f.mealType === key)
+      .reduce((a, f) => a + (Number(f.kcal) || 0), 0);
+
+    const div = document.createElement("div");
+    div.className = "meal-box";
+    div.innerHTML = `
+      <div>
+        <b>${label}</b>
+        <small>${foods.filter(f => f.mealType === key).length} ieraksti</small>
+      </div>
+      <strong>${Math.round(kcal)} kcal</strong>
+    `;
+    box.appendChild(div);
+  });
+}
+
+function renderAnalytics() {
+  const s = getSettings();
+  const dates = getLast7Dates();
+  const totals = dates.map(d => getTotals(d));
+
+  const kcalDays = totals.map(t => t.kcal);
+  const avg = kcalDays.reduce((a, b) => a + b, 0) / 7;
+
+  const proteinOkDays = totals.filter(t => t.protein >= s.protein).length;
+  const compliance = Math.round((proteinOkDays / 7) * 100);
+
+  const deficit = Math.round(s.kcal - avg);
+
+  const weights = JSON.parse(localStorage.getItem("weights")) || [];
+  const lastWeights = weights.slice(-7);
+
+  let trend = "—";
+  if (lastWeights.length >= 2) {
+    const diff = +(lastWeights[lastWeights.length - 1].weight - lastWeights[0].weight).toFixed(1);
+    trend = diff > 0 ? `+${diff} kg` : `${diff} kg`;
   }
+
+  document.getElementById("avgKcal7").textContent = Math.round(avg);
+  document.getElementById("proteinCompliance").textContent = compliance + "%";
+  document.getElementById("deficitCalc").textContent = deficit;
+  document.getElementById("weightTrend").textContent = trend;
 }
 
 function renderFoodList() {
   const list = document.getElementById("foodList");
+  if (!list) return;
+
   const foods = getFoods();
   list.innerHTML = "";
 
@@ -438,9 +457,9 @@ function renderFoodList() {
     div.className = "food-item";
     div.innerHTML = `
       <strong>${f.name}</strong>
-      <small>${f.mealType}</small>
-      <small>${f.kcal} kcal | P ${f.protein} g | C ${f.carbs} g | F ${f.fat} g</small>
-      <button onclick="deleteFood(${f.id})">Dzēst</button>
+      <small>${f.mealType || ""}</small>
+      <small>${f.kcal} kcal | P ${f.protein} | C ${f.carbs} | F ${f.fat}</small>
+      <button onclick="deleteFood('${f.id}')">Dzēst</button>
     `;
     list.appendChild(div);
   });
@@ -452,7 +471,9 @@ function renderProducts() {
   ["portionFood", "rProduct"].forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
+
     sel.innerHTML = "";
+
     products.forEach(p => {
       const opt = document.createElement("option");
       opt.value = p.id;
@@ -461,17 +482,15 @@ function renderProducts() {
     });
   });
 
-  const quick = document.getElementById("quickButtons");
-  quick.innerHTML = "";
-  products.slice(0, 8).forEach(p => {
-    const b = document.createElement("button");
-    b.textContent = `+ ${p.name}`;
-    b.onclick = () => addQuickFood(p.id);
-    quick.appendChild(b);
-  });
-
   const list = document.getElementById("productList");
+  if (!list) return;
+
   list.innerHTML = "";
+
+  if (!products.length) {
+    list.innerHTML = "<p>Produktu DB ir tukša.</p>";
+    return;
+  }
 
   products.forEach(p => {
     const div = document.createElement("div");
@@ -489,17 +508,25 @@ function renderRecipes() {
   const recipes = getRecipes();
 
   const select = document.getElementById("recipeSelectToday");
-  select.innerHTML = "";
-
-  recipes.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r.id;
-    opt.textContent = r.name;
-    select.appendChild(opt);
-  });
+  if (select) {
+    select.innerHTML = "";
+    recipes.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      select.appendChild(opt);
+    });
+  }
 
   const list = document.getElementById("recipeList");
+  if (!list) return;
+
   list.innerHTML = "";
+
+  if (!recipes.length) {
+    list.innerHTML = "<p>Nav recepšu.</p>";
+    return;
+  }
 
   recipes.forEach(r => {
     const t = calculateRecipeTotals(r);
@@ -524,124 +551,33 @@ function renderRecipes() {
   renderIngredients();
 }
 
-function renderTemplates() {
-  const list = document.getElementById("templateList");
-  list.innerHTML = "";
+function renderSettings() {
+  const s = getSettings();
 
-  const templates = getTemplates();
+  document.getElementById("setKcal").value = s.kcal;
+  document.getElementById("setProtein").value = s.protein;
+  document.getElementById("setCarbs").value = s.carbs;
+  document.getElementById("setFat").value = s.fat;
+  document.getElementById("setWater").value = s.water;
 
-  if (!templates.length) {
-    list.innerHTML = "<p>Nav template.</p>";
-    return;
-  }
-
-  templates.forEach(t => {
-    const kcal = t.foods.reduce((a, f) => a + f.kcal, 0);
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.innerHTML = `
-      <strong>${t.name}</strong>
-      <small>${Math.round(kcal)} kcal | ${t.foods.length} ieraksti</small>
-      <div class="inline-actions">
-        <button onclick="applyTemplate('${t.id}')">Pievienot šodien</button>
-        <button onclick="deleteTemplate('${t.id}')">Dzēst</button>
-      </div>
-    `;
-    list.appendChild(div);
-  });
-}
-
-function renderWeight() {
   const weights = JSON.parse(localStorage.getItem("weights")) || [];
   const last = weights[weights.length - 1];
 
   document.getElementById("lastWeight").textContent = last
     ? `Pēdējais svars: ${last.weight} kg (${last.date})`
     : "Nav svara ierakstu.";
-
-  const list = document.getElementById("weightList");
-  list.innerHTML = "";
-
-  weights.slice().reverse().forEach(w => {
-    const div = document.createElement("div");
-    div.className = "weight-item";
-    div.innerHTML = `
-      <strong>${w.weight} kg</strong>
-      <small>${w.date}</small>
-      <button onclick="deleteWeight('${w.date}')">Dzēst</button>
-    `;
-    list.appendChild(div);
-  });
-
-  drawWeightChart(weights);
-}
-
-function drawWeightChart(weights) {
-  const canvas = document.getElementById("weightChart");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  if (weights.length < 2) {
-    ctx.fillStyle = "#aaa";
-    ctx.font = "16px Arial";
-    ctx.fillText("Vajag vismaz 2 svara ierakstus", 30, 90);
-    return;
-  }
-
-  const values = weights.map(w => w.weight);
-  const min = Math.min(...values) - 1;
-  const max = Math.max(...values) + 1;
-  const pad = 24;
-  const width = canvas.width - pad * 2;
-  const height = canvas.height - pad * 2;
-
-  ctx.strokeStyle = "#555";
-  ctx.strokeRect(pad, pad, width, height);
-
-  ctx.strokeStyle = "#c62828";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-
-  weights.forEach((w, i) => {
-    const x = pad + (i / (weights.length - 1)) * width;
-    const y = pad + height - ((w.weight - min) / (max - min)) * height;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-
-  ctx.stroke();
-}
-
-function renderSettings() {
-  const s = getSettings();
-  document.getElementById("setKcal").value = s.kcal;
-  document.getElementById("setProtein").value = s.protein;
-  document.getElementById("setCarbs").value = s.carbs;
-  document.getElementById("setFat").value = s.fat;
-  document.getElementById("setWater").value = s.water;
 }
 
 function render() {
-  document.getElementById("datePicker").value = currentDate;
-  renderSummary();
+  renderOverview();
   renderFoodList();
   renderProducts();
   renderRecipes();
-  renderTemplates();
-  renderWeight();
   renderSettings();
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=3");
+  navigator.serviceWorker.register("service-worker.js?v=4");
 }
 
 render();
-
-function clearProductDatabase() {
-  if (!confirm("Dzēst visu produktu datubāzi?")) return;
-  localStorage.setItem("kk_products", JSON.stringify([]));
-  render();
-}
