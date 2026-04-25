@@ -1,11 +1,11 @@
-const CACHE_NAME = "kk-calorie-app-v6-3";
+const CACHE_NAME = "kk-calorie-app-v6-4";
 
 const FILES_TO_CACHE = [
   "./",
-  "./index.html?v=6.3",
-  "./style.css?v=6.3",
-  "./app.js?v=6.3",
-  "./manifest.json?v=6.3",
+  "./index.html?v=6.4",
+  "./style.css?v=6.4",
+  "./app.js?v=6.4",
+  "./manifest.json?v=6.4",
   "./icon-192.png",
   "./icon-512.png"
 ];

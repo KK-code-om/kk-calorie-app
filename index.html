@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V6.3</title>
+  <title>KK Calories V6.4</title>
 
-  <link rel="stylesheet" href="style.css?v=6.3.3" />
-  <link rel="manifest" href="manifest.json?v=6.3.3" />
+  <link rel="stylesheet" href="style.css?v=6.4.3" />
+  <link rel="manifest" href="manifest.json?v=6.4.3" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -220,6 +220,138 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=6.3.3"></script>
+  <script src="app.js?v=6.4.3"></script>
+
+<script>
+(function () {
+  function n(v) {
+    return Number(String(v || "0").replace(",", ".").trim()) || 0;
+  }
+
+  function status(msg) {
+    var el = document.getElementById("csvImportStatus");
+    if (el) el.textContent = msg;
+  }
+
+  function getProductsSafe() {
+    try {
+      return JSON.parse(localStorage.getItem("kk_products")) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveProductsSafe(products) {
+    localStorage.setItem("kk_products", JSON.stringify(products));
+  }
+
+  function repaintProductsSafe() {
+    if (typeof renderProducts === "function") {
+      renderProducts();
+    }
+    if (typeof renderQuickFoodPicker === "function") {
+      renderQuickFoodPicker();
+    }
+  }
+
+  window.kkInlineCsvImport = function () {
+    var box = document.getElementById("csvImportBox");
+    if (!box) {
+      alert("CSV lauks nav atrasts.");
+      return;
+    }
+
+    var raw = box.value.trim();
+    if (!raw) {
+      status("CSV lauks ir tukšs.");
+      alert("CSV lauks ir tukšs.");
+      return;
+    }
+
+    var lines = raw.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (lines.length < 2) {
+      status("CSV vajag header + vismaz 1 produktu.");
+      alert("CSV vajag header + vismaz 1 produktu.");
+      return;
+    }
+
+    var header = lines[0].split(",").map(function (x) { return x.trim().toLowerCase(); });
+    var required = ["name", "kcal", "protein", "carbs", "fat"];
+
+    for (var i = 0; i < required.length; i++) {
+      if (header.indexOf(required[i]) === -1) {
+        status("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+        alert("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+        return;
+      }
+    }
+
+    var idx = {
+      name: header.indexOf("name"),
+      kcal: header.indexOf("kcal"),
+      protein: header.indexOf("protein"),
+      carbs: header.indexOf("carbs"),
+      fat: header.indexOf("fat")
+    };
+
+    var products = getProductsSafe();
+    var added = 0;
+    var updated = 0;
+    var skipped = 0;
+
+    lines.slice(1).forEach(function (line) {
+      var c = line.split(",").map(function (x) { return x.trim(); });
+      var name = c[idx.name];
+
+      if (!name) {
+        skipped++;
+        return;
+      }
+
+      var item = {
+        name: name,
+        kcal: n(c[idx.kcal]),
+        protein: n(c[idx.protein]),
+        carbs: n(c[idx.carbs]),
+        fat: n(c[idx.fat])
+      };
+
+      var found = products.findIndex(function (p) {
+        return String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim();
+      });
+
+      if (found >= 0) {
+        products[found] = Object.assign({}, products[found], item, {
+          favorite: Boolean(products[found].favorite)
+        });
+        updated++;
+      } else {
+        products.push(Object.assign({
+          id: Date.now() + Math.random(),
+          favorite: false
+        }, item));
+        added++;
+      }
+    });
+
+    saveProductsSafe(products);
+    box.value = "";
+    repaintProductsSafe();
+
+    var msg = "CSV import OK. Pievienoti: " + added + ", Atjaunoti: " + updated + ", Izlaisti: " + skipped;
+    status(msg);
+    alert(msg);
+  };
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var btn = document.getElementById("csvImportBtn");
+    if (btn) {
+      btn.onclick = window.kkInlineCsvImport;
+      status("CSV import gatavs.");
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
