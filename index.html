@@ -7,10 +7,10 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=9.3" />
-  <link rel="manifest" href="manifest.json?v=9.3" />
+  <link rel="stylesheet" href="style.css?v=9.4" />
+  <link rel="manifest" href="manifest.json?v=9.4" />
 
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -25,7 +25,7 @@
     <section id="overview" class="screen active-screen">
 
       <header class="top-bar">
-        <div class="top-bar-left">
+        <div>
           <p class="top-label">Šodien</p>
           <h1 id="dateLabel">—</h1>
         </div>
@@ -38,23 +38,28 @@
         <button class="nav-arrow" onclick="changeDay(1)">›</button>
       </div>
 
-      <!-- Gauge card -->
       <div class="gauge-card">
         <div class="gauge-wrap">
-          <svg class="gauge-svg" viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#ece9e3" stroke-width="16" stroke-linecap="round"/>
-            <path id="gaugeArc" d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#e8533a" stroke-width="16" stroke-linecap="round"
-              stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
+          <svg viewBox="0 0 200 116" class="gauge-svg" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 20 110 A 80 80 0 0 1 180 110"
+              fill="none" stroke="rgba(255,255,255,0.12)"
+              stroke-width="14" stroke-linecap="round"/>
+            <path id="gaugeArc"
+              d="M 20 110 A 80 80 0 0 1 180 110"
+              fill="none" stroke="#e8533a"
+              stroke-width="14" stroke-linecap="round"
+              stroke-dasharray="251.3"
+              stroke-dashoffset="251.3"
+              style="transition: stroke-dashoffset 0.6s ease"/>
           </svg>
           <div class="gauge-center">
             <span class="gauge-num" id="totalKcal">0</span>
-            <span class="gauge-sub">/ <span id="targetKcal">1900</span> kcal</span>
+            <span class="gauge-unit">/ <span id="targetKcal">1900</span> kcal</span>
           </div>
         </div>
         <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
       </div>
 
-      <!-- Macro tiles -->
       <div class="macro-grid">
         <div class="macro-tile tile-fire">
           <span class="tile-icon">🔥</span>
@@ -78,19 +83,41 @@
         </div>
       </div>
 
-      <!-- Meal summary -->
       <div class="section-card">
-        <div class="section-header">
-          <h2>Uzturs šodien</h2>
-        </div>
+        <h2>Uzturs šodien</h2>
         <div id="mealSummary"></div>
       </div>
 
-      <!-- Analytics -->
-      <div class="section-card">
-        <div class="section-header">
-          <h2>Analītika</h2>
+      <!-- Dashboard cards -->
+      <div class="dash-grid">
+        <div class="dash-card" style="background:#1a1a1a" onclick="showTab('nutrition')">
+          <span class="dash-icon">🍽</span>
+          <div class="dash-label">Uzturs</div>
+          <div class="dash-sub">Pievienot ēdienu</div>
+          <span class="dash-arrow">›</span>
         </div>
+        <div class="dash-card" style="background:#2d4a3e" onclick="showTab('products')">
+          <span class="dash-icon">🥦</span>
+          <div class="dash-label">Produkti</div>
+          <div class="dash-sub">DB un imports</div>
+          <span class="dash-arrow">›</span>
+        </div>
+        <div class="dash-card" style="background:#4a2d1a" onclick="showTab('recipes')">
+          <span class="dash-icon">👨‍🍳</span>
+          <div class="dash-label">Receptes</div>
+          <div class="dash-sub">Gatavot un pievienot</div>
+          <span class="dash-arrow">›</span>
+        </div>
+        <div class="dash-card" style="background:#1a2d4a" onclick="showTab('settings')">
+          <span class="dash-icon">⚙️</span>
+          <div class="dash-label">Iestatījumi</div>
+          <div class="dash-sub">Mērķi un eksports</div>
+          <span class="dash-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h2>Analītika</h2>
         <div class="analytics-grid">
           <div class="analytics-tile">
             <b id="avgKcal7">0</b>
@@ -112,16 +139,15 @@
       </div>
 
     </section>
-    <!-- ===== END OVERVIEW ===== -->
 
     <!-- ===== NUTRITION ===== -->
     <section id="nutrition" class="screen">
-
       <header class="top-bar">
-        <div class="top-bar-left">
+        <div>
           <p class="top-label">Ievade</p>
           <h1>Uzturs</h1>
         </div>
+        <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
 
       <div class="section-card">
@@ -154,27 +180,25 @@
       <div class="section-card">
         <h2>Šodienas ieraksti</h2>
         <div id="foodList"></div>
-        <button class="btn-danger full-width" onclick="resetDay()">Dzēst dienu</button>
+        <button class="btn-danger full-width" style="margin-top:8px" onclick="resetDay()">Dzēst dienu</button>
       </div>
 
       <div class="section-card">
         <h2>Šabloni</h2>
         <input id="tmplName" placeholder="Šablona nosaukums" class="field" />
         <button class="btn-secondary full-width" onclick="createTemplate()">Saglabāt šodienu kā šablonu</button>
-        <div id="templateList"></div>
+        <div id="templateList" style="margin-top:10px"></div>
       </div>
-
     </section>
-    <!-- ===== END NUTRITION ===== -->
 
     <!-- ===== PRODUCTS ===== -->
     <section id="products" class="screen">
-
       <header class="top-bar">
-        <div class="top-bar-left">
+        <div>
           <p class="top-label">Datubāze</p>
           <h1>Produkti</h1>
         </div>
+        <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
 
       <div class="section-card">
@@ -213,18 +237,16 @@
         <input id="productSearch" placeholder="Meklēt produktu..." class="field" oninput="renderProducts()" />
         <div id="productList"></div>
       </div>
-
     </section>
-    <!-- ===== END PRODUCTS ===== -->
 
     <!-- ===== RECIPES ===== -->
     <section id="recipes" class="screen">
-
       <header class="top-bar">
-        <div class="top-bar-left">
+        <div>
           <p class="top-label">Gatavošana</p>
           <h1>Receptes</h1>
         </div>
+        <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
 
       <div class="section-card">
@@ -249,7 +271,7 @@
           <input id="rGrams" type="number" placeholder="Grami" class="field" />
         </div>
         <button class="btn-secondary full-width" onclick="addIngredient()">+ Sastāvdaļa</button>
-        <div id="ingredientList"></div>
+        <div id="ingredientList" style="margin-top:8px"></div>
         <button class="btn-primary full-width" onclick="saveRecipe()">Saglabāt recepti</button>
       </div>
 
@@ -257,18 +279,16 @@
         <h2>Manas receptes</h2>
         <div id="recipeList"></div>
       </div>
-
     </section>
-    <!-- ===== END RECIPES ===== -->
 
     <!-- ===== SETTINGS ===== -->
     <section id="settings" class="screen">
-
       <header class="top-bar">
-        <div class="top-bar-left">
+        <div>
           <p class="top-label">Konfigurācija</p>
           <h1>Iestatījumi</h1>
         </div>
+        <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
 
       <div class="section-card">
@@ -296,7 +316,7 @@
 
       <div class="section-card">
         <h2>Datu eksports</h2>
-        <div class="export-grid">
+        <div class="field-row">
           <button class="btn-secondary" onclick="exportData()">Export JSON</button>
           <button class="btn-secondary" onclick="exportCSV()">Export CSV</button>
         </div>
@@ -304,9 +324,7 @@
         <button class="btn-ghost full-width" onclick="document.getElementById('importJsonFile').click()">Import JSON</button>
         <p id="importStatus" class="muted-text"></p>
       </div>
-
     </section>
-    <!-- ===== END SETTINGS ===== -->
 
   </main>
 
@@ -333,6 +351,6 @@
     </button>
   </nav>
 
-  <script src="app.js?v=9.3"></script>
+  <script src="app.js?v=9.4"></script>
 </body>
 </html>
