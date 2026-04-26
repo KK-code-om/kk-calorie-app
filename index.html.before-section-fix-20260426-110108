@@ -47,7 +47,44 @@
         <div class="mini-card"><span>🌾</span><b id="carbsMini">0 g</b><small>Ogļhidrāti</small></div>
         <div class="mini-card"><span>💧</span><b id="fatMini">0 g</b><small>Tauki</small></div>
       </section>
-</section>
+
+      
+
+      <section class="card">
+        <h2>Produkts gramos</h2>
+        <select id="portionFood"></select>
+        <input id="portionGrams" type="number" placeholder="Grami" />
+        <select id="portionMeal">
+          <option value="breakfast">Brokastis</option>
+          <option value="lunch">Pusdienas</option>
+          <option value="dinner">Vakariņas</option>
+          <option value="snack">Uzkoda</option>
+        </select>
+        <button onclick="addPortionFood()">Pievienot</button>
+      </section>
+
+      <section class="card">
+        <h2>Manuāli</h2>
+        <input id="foodName" placeholder="Ēdiens" />
+        <input id="kcal" type="number" placeholder="kcal" />
+        <input id="protein" type="number" step="0.1" placeholder="Proteīns g" />
+        <input id="carbs" type="number" step="0.1" placeholder="Ogļhidrāti g" />
+        <input id="fat" type="number" step="0.1" placeholder="Tauki g" />
+        <button onclick="addManualFood()">Pievienot manuāli</button>
+      </section>
+
+      <section class="card">
+        <h2>Ieraksti</h2>
+        <div id="foodList"></div>
+        <button class="danger" onclick="resetDay()">Dzēst dienu</button>
+      </section>
+    
+      <section class="card">
+        <h2>Šabloni</h2>
+        <input id="tmplName" placeholder="Šablona nosaukums" />
+        <button onclick="createTemplate()">Saglabāt šodienu kā šablonu</button>
+        <div id="templateList"></div>
+      </section>
     
     <section id="products" class="screen">
       <section class="card">
