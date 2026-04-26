@@ -665,7 +665,13 @@ function renderProducts() {
     ? products.filter(p => String(p.name || "").toLowerCase().includes(q))
     : products;
 
-  const box = document.getElementById("productList");
+  
+const box = document.getElementById("productList");
+if (!box) {
+  console.log("productList not found");
+  return;
+}
+
 
   if (box) {
     clear(box);
