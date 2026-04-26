@@ -570,7 +570,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.3.3");
+  navigator.serviceWorker.register("service-worker.js?v=7.2.3.3");
 }
 
 render();
@@ -686,19 +686,31 @@ function getFilteredProductsForDb() {
   return products;
 }
 
-function quickAddProduct(productId, grams = null) {
+
+function quickAddProduct(productId, grams = null, meal = "snack") {
   const p = getProducts().find(x => String(x.id) === String(productId));
   if (!p) return alert("Produkts nav atrasts.");
 
-  const input = prompt("Grami:", grams || "100");
-  const g = Number(String(input || "").replace(",", "."));
-  if (!g || g <= 0) return;
+  const gramsInput = document.getElementById("quickGrams");
+  const g = grams || Number(gramsInput?.value) || 100;
 
-  const meal = document.getElementById("portionMeal")?.value || "snack";
+  if (!g || g <= 0) return alert("Ievadi gramus.");
+
+  const mealSelect = document.getElementById("portionMeal");
+  const mealType = mealSelect ? mealSelect.value : meal;
+
   const f = g / 100;
 
   addEntry({
     name: `${p.name} ${g}g`,
+    kcal: Math.round((p.kcal || 0) * f),
+    protein: +((p.protein || 0) * f).toFixed(1),
+    carbs: +((p.carbs || 0) * f).toFixed(1),
+    fat: +((p.fat || 0) * f).toFixed(1),
+    mealType
+  });
+}
+ ${g}g`,
     kcal: Math.round(Number(p.kcal || 0) * f),
     protein: +(Number(p.protein || 0) * f).toFixed(1),
     carbs: +(Number(p.carbs || 0) * f).toFixed(1),
