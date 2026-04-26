@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9.6" />
+  <link rel="stylesheet" href="style.css?v=9.7" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -84,8 +84,10 @@
       </header>
       <div class="section-card">
         <h2>Pievienot produktu</h2>
-        <input id="portionFoodSearch" list="portionFoodList" placeholder="Raksti produkta nosaukumu..." class="field" autocomplete="off" />
-        <datalist id="portionFoodList"></datalist>
+        <div class="picker-wrap">
+          <input id="portionFoodSearch" class="picker-input" placeholder="Raksti produkta nosaukumu..." autocomplete="off" oninput="pickerFilter('portionFoodSearch','portionDropdown')" onfocus="pickerOpen('portionDropdown')" />
+          <div id="portionDropdown" class="picker-dropdown"></div>
+        </div>
         <input id="portionGrams" type="number" placeholder="Grami" class="field" />
         <select id="portionMeal" class="field">
           <option value="breakfast">🍳 Brokastis</option>
@@ -184,8 +186,10 @@
         <h2>Jauna recepte</h2>
         <input id="rName" placeholder="Receptes nosaukums" class="field" />
         <input id="rYield" type="number" placeholder="Gatavais svars gramos" class="field" />
-        <input id="rProductSearch" list="rProductList" placeholder="Sastāvdaļa..." class="field" autocomplete="off" />
-        <datalist id="rProductList"></datalist>
+        <div class="picker-wrap">
+          <input id="rProductSearch" class="picker-input" placeholder="Sastāvdaļa..." autocomplete="off" oninput="pickerFilter('rProductSearch','rDropdown')" onfocus="pickerOpen('rDropdown')" />
+          <div id="rDropdown" class="picker-dropdown"></div>
+        </div>
         <input id="rGrams" type="number" placeholder="Grami" class="field" />
         <button class="btn-secondary full-width" onclick="addIngredient()">+ Sastāvdaļa</button>
         <div id="ingredientList" style="margin-top:8px"></div>
@@ -267,6 +271,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=9.6"></script>
+  <script src="app.js?v=9.7"></script>
 </body>
 </html>

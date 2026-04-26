@@ -141,20 +141,77 @@ function deleteProduct(id) {
   renderProductDatalist();
 }
 
-/* Atjaunina abus datalist elementus no DB */
+/* ===== CUSTOM FOOD PICKER ===== */
+let pickerProducts = [];
+
 function renderProductDatalist() {
-  const products = getProducts();
-  ["portionFoodList", "rProductList"].forEach(listId => {
-    const dl = document.getElementById(listId);
-    if (!dl) return;
-    dl.innerHTML = "";
-    products.forEach(p => {
-      const o = document.createElement("option");
-      o.value = p.name;
-      dl.appendChild(o);
-    });
+  pickerProducts = getProducts();
+  // Pre-populate both dropdowns empty (shown on focus/type)
+  ["portionDropdown","rDropdown"].forEach(id => {
+    const dd = document.getElementById(id);
+    if (dd) dd.innerHTML = "";
   });
 }
+
+function pickerOpen(dropdownId) {
+  const input = dropdownId === "portionDropdown"
+    ? document.getElementById("portionFoodSearch")
+    : document.getElementById("rProductSearch");
+  pickerFilter(input.id, dropdownId);
+}
+
+function pickerFilter(inputId, dropdownId) {
+  const input = document.getElementById(inputId);
+  const dd = document.getElementById(dropdownId);
+  if (!input || !dd) return;
+
+  const q = input.value.toLowerCase().trim();
+  const products = getProducts();
+  const filtered = q
+    ? products.filter(p => p.name.toLowerCase().includes(q))
+    : products.slice(0, 30);
+
+  dd.innerHTML = "";
+
+  if (!filtered.length) {
+    dd.classList.remove("open");
+    return;
+  }
+
+  filtered.forEach(p => {
+    const item = document.createElement("div");
+    item.className = "picker-item";
+    item.innerHTML = `${p.name}<small>${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}</small>`;
+    item.addEventListener("mousedown", e => {
+      e.preventDefault();
+      input.value = p.name;
+      dd.classList.remove("open");
+    });
+    item.addEventListener("touchstart", e => {
+      e.preventDefault();
+      input.value = p.name;
+      dd.classList.remove("open");
+    }, { passive: false });
+    dd.appendChild(item);
+  });
+
+  dd.classList.add("open");
+}
+
+function pickerClose(dropdownId) {
+  const dd = document.getElementById(dropdownId);
+  if (dd) dd.classList.remove("open");
+}
+
+// Close dropdowns on outside click/touch
+document.addEventListener("click", e => {
+  ["portionDropdown","rDropdown"].forEach(id => {
+    const dd = document.getElementById(id);
+    if (dd && !dd.contains(e.target) && e.target.id !== "portionFoodSearch" && e.target.id !== "rProductSearch") {
+      dd.classList.remove("open");
+    }
+  });
+});
 
 function importProductsCSV() {
   const box = document.getElementById("csvImportBox");
@@ -560,7 +617,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=9.6");
+  navigator.serviceWorker.register("service-worker.js?v=9.7");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
