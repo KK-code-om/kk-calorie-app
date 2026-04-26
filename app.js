@@ -9,10 +9,6 @@ const DEFAULT_SETTINGS = {
 let currentDate = new Date().toISOString().slice(0, 10);
 let currentIngredients = [];
 
-function num(v) {
-  return Number(String(v || "0").replace(",", ".").trim()) || 0;
-}
-
 function clear(el) {
   if (el) el.textContent = "";
 }
@@ -31,14 +27,6 @@ function getFoods(date = currentDate) {
 
 function saveFoods(foods, date = currentDate) {
   localStorage.setItem("foods_" + date, JSON.stringify(foods));
-}
-
-function getProducts() {
-  return JSON.parse(localStorage.getItem("kk_products")) || [];
-}
-
-function saveProducts(products) {
-  localStorage.setItem("kk_products", JSON.stringify(products));
 }
 
 function getRecipes() {
@@ -113,27 +101,6 @@ function addManualFood() {
   ["foodName", "kcal", "protein", "carbs", "fat"].forEach(id => document.getElementById(id).value = "");
 }
 
-function addProductByGrams(productId, grams, mealType) {
-  const p = getProducts().find(x => String(x.id) === String(productId));
-  if (!p) return alert("Produkts nav atrasts.");
-
-  const g = num(grams);
-  if (!g || g <= 0) return alert("Ievadi gramus.");
-
-  const f = g / 100;
-
-  addEntry({
-    name: `${p.name} ${g}g`,
-    kcal: Math.round(num(p.kcal) * f),
-    protein: +(num(p.protein) * f).toFixed(1),
-    carbs: +(num(p.carbs) * f).toFixed(1),
-    fat: +(num(p.fat) * f).toFixed(1),
-    mealType: mealType || "snack"
-  });
-
-  touchRecentFood(productId);
-}
-
 function quickAddProduct(productId) {
   addProductByGrams(
     productId,
@@ -150,12 +117,6 @@ function addPortionFood() {
   );
 
   document.getElementById("portionGrams").value = "";
-}
-
-function deleteFood(id) {
-  if (!confirm("Dzēst ierakstu?")) return;
-  saveFoods(getFoods().filter(f => String(f.id) !== String(id)));
-  refreshFoodViews();
 }
 
 function resetDay() {
@@ -182,12 +143,6 @@ function saveProduct() {
 
   saveProducts(products);
   ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
-  refreshProductViews();
-}
-
-function deleteProduct(id) {
-  if (!confirm("Dzēst produktu?")) return;
-  saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
   refreshProductViews();
 }
 
@@ -279,32 +234,6 @@ function addIngredient() {
   currentIngredients.push({ productId: p.id, name: p.name, grams });
   document.getElementById("rGrams").value = "";
   renderIngredients();
-}
-
-function renderIngredients() {
-  const box = document.getElementById("ingredientList");
-  if (!box) return;
-
-  clear(box);
-
-  currentIngredients.forEach((ing, index) => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-
-    const name = document.createElement("strong");
-    name.textContent = ing.name;
-
-    const grams = document.createElement("small");
-    grams.textContent = `${ing.grams} g`;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Dzēst";
-    btn.dataset.index = index;
-    btn.addEventListener("click", () => removeIngredient(index));
-
-    div.append(name, grams, btn);
-    box.appendChild(div);
-  });
 }
 
 function removeIngredient(index) {
@@ -412,78 +341,6 @@ function saveSettings() {
   renderOverview();
 }
 
-function exportData() {
-  const data = {};
-
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") {
-      data[k] = localStorage.getItem(k);
-    }
-  });
-
-  const today = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-
-  a.href = URL.createObjectURL(blob);
-  a.download = `kk-calories-${today}.json`;
-  a.click();
-
-  URL.revokeObjectURL(a.href);
-}
-
-function importDataFromFile(event) {
-  const file = event.target.files && event.target.files[0];
-  const status = document.getElementById("importStatus");
-
-  function setStatus(msg) {
-    if (status) status.textContent = msg;
-  }
-
-  if (!file) {
-    setStatus("Fails nav izvēlēts.");
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      const keys = Object.keys(data);
-
-      const invalid = keys.filter(k =>
-        !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights")
-      );
-
-      if (invalid.length) {
-        setStatus("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
-        alert("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
-        return;
-      }
-
-      keys.forEach(k => localStorage.setItem(k, data[k]));
-
-      setStatus("Import OK.");
-      alert("Import OK.");
-
-      event.target.value = "";
-      render();
-
-    } catch (err) {
-      setStatus("Import kļūda.");
-      alert("Import kļūda.");
-    }
-  };
-
-  reader.onerror = function() {
-    setStatus("Faila lasīšanas kļūda.");
-    alert("Faila lasīšanas kļūda.");
-  };
-
-  reader.readAsText(file);
-}
-
 function exportCSV() {
   const rows = [["date", "meal", "food", "kcal", "protein", "carbs", "fat"]];
 
@@ -502,348 +359,6 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = "kk-calories.csv";
   a.click();
-}
-
-function renderOverview() {
-  const foods = getFoods();
-  const s = getSettings();
-
-  const totals = foods.reduce((a, f) => {
-    a.kcal += num(f.kcal);
-    a.protein += num(f.protein);
-    a.carbs += num(f.carbs);
-    a.fat += num(f.fat);
-    return a;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-
-  document.getElementById("datePicker").value = currentDate;
-  document.getElementById("dateLabel").textContent = currentDate;
-  document.getElementById("totalKcal").textContent = Math.round(totals.kcal);
-  document.getElementById("targetKcal").textContent = s.kcal;
-  document.getElementById("remainingKcal").textContent = Math.round(s.kcal - totals.kcal);
-  document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
-  document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
-  document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
-  document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
-
-  const pct = Math.min(100, Math.round((totals.kcal / s.kcal) * 100));
-  document.getElementById("gauge").style.setProperty("--p", pct + "%");
-
-  renderMealSummary();
-  renderAnalytics();
-}
-
-function renderMealSummary() {
-  const box = document.getElementById("mealSummary");
-  const foods = getFoods();
-
-  const names = {
-    breakfast: "Brokastis",
-    lunch: "Pusdienas",
-    dinner: "Vakariņas",
-    snack: "Uzkodas"
-  };
-
-  clear(box);
-
-  Object.keys(names).forEach(meal => {
-    const kcal = foods.filter(f => f.mealType === meal).reduce((a, f) => a + num(f.kcal), 0);
-
-    const div = document.createElement("div");
-    div.className = "meal-box";
-
-    const wrap = document.createElement("div");
-    const title = document.createElement("b");
-    title.textContent = names[meal];
-
-    const small = document.createElement("small");
-    small.textContent = `${Math.round(kcal)} kcal`;
-
-    wrap.append(title, small);
-    div.appendChild(wrap);
-    box.appendChild(div);
-  });
-}
-
-
-function renderAnalytics() {
-  const s = getSettings();
-  let total7 = 0;
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    total7 += getFoods(key).reduce((a, f) => a + num(f.kcal), 0);
-  }
-
-  const avg = Math.round(total7 / 7);
-  const todayProtein = getFoods().reduce((a, f) => a + num(f.protein), 0);
-
-  document.getElementById("avgKcal7").textContent = avg;
-  document.getElementById("proteinCompliance").textContent = Math.round((todayProtein / s.protein) * 100) + "%";
-  document.getElementById("deficitCalc").textContent = Math.round(s.kcal - avg);
-
-  const weights = (JSON.parse(localStorage.getItem("weights")) || [])
-    .filter(w => w && w.date && num(w.weight))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  const trendEl = document.getElementById("weightTrend");
-
-  if (weights.length === 0) {
-    trendEl.textContent = "—";
-    return;
-  }
-
-  if (weights.length === 1) {
-    trendEl.textContent = `${num(weights[0].weight).toFixed(1)} kg`;
-    return;
-  }
-
-  if (weights.length < 6) {
-    const first = num(weights[0].weight);
-    const last = num(weights[weights.length - 1].weight);
-    const diff = +(last - first).toFixed(1);
-    const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
-
-    trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
-    return;
-  }
-
-  const last3 = weights.slice(-3);
-  const prev3 = weights.slice(-6, -3);
-
-  const avgLast = last3.reduce((a, w) => a + num(w.weight), 0) / last3.length;
-  const avgPrev = prev3.reduce((a, w) => a + num(w.weight), 0) / prev3.length;
-  const diff = +(avgLast - avgPrev).toFixed(1);
-
-  const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
-  trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
-}
-
-
-function renderFoodList() {
-  const box = document.getElementById("foodList");
-  if (!box) return;
-
-  const foods = getFoods();
-  clear(box);
-
-  if (!foods.length) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "Nav ierakstu.";
-    box.appendChild(p);
-    return;
-  }
-
-  foods.forEach(f => {
-    const div = document.createElement("div");
-    div.className = "food-item";
-
-    const title = document.createElement("strong");
-    title.textContent = f.name;
-
-    const small = document.createElement("small");
-    small.textContent = `${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}`;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Dzēst";
-    btn.dataset.id = f.id;
-    btn.addEventListener("click", () => deleteFood(f.id));
-
-    div.append(title, small, btn);
-    box.appendChild(div);
-  });
-}
-
-function renderProducts() {
-  const products = getProducts();
-  const q = String(document.getElementById("productSearch")?.value || "").toLowerCase().trim();
-
-  const filtered = q
-    ? products.filter(p => String(p.name || "").toLowerCase().includes(q))
-    : products;
-
-  
-const box = document.getElementById("productList");
-if (!box) {
-  console.log("productList not found");
-  return;
-}
-
-
-  if (box) {
-    clear(box);
-
-    if (!filtered.length) {
-      const p = document.createElement("p");
-      p.className = "muted";
-      p.textContent = "Nav produktu.";
-      box.appendChild(p);
-    } else {
-      filtered.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "food-item";
-
-        const title = document.createElement("strong");
-        title.textContent = p.name;
-
-        const small = document.createElement("small");
-        small.textContent = `${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}`;
-
-        const btn = document.createElement("button");
-        btn.textContent = "Dzēst";
-        btn.dataset.id = p.id;
-        btn.addEventListener("click", () => deleteProduct(p.id));
-
-        div.append(title, small, btn);
-        box.appendChild(div);
-      });
-    }
-  }
-
-  const portion = document.getElementById("portionFood");
-  if (portion) {
-    clear(portion);
-    products.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      portion.appendChild(opt);
-    });
-  }
-
-  const rProduct = document.getElementById("rProduct");
-  if (rProduct) {
-    clear(rProduct);
-    products.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.textContent = p.name;
-      rProduct.appendChild(opt);
-    });
-  }
-
-  renderQuickFoodPicker();
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodList");
-  if (!box) return;
-
-  const q = String(document.getElementById("foodSearch")?.value || "").toLowerCase().trim();
-  let products = getProducts();
-
-  if (q) {
-    products = products.filter(p => String(p.name || "").toLowerCase().includes(q));
-  }
-
-  products = products.slice(0, 12);
-
-  clear(box);
-
-  if (!products.length) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "Nav atrastu produktu.";
-    box.appendChild(p);
-    return;
-  }
-
-  products.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.style.cursor = "pointer";
-    div.dataset.id = p.id;
-
-    const title = document.createElement("strong");
-    title.textContent = p.name;
-
-    const small = document.createElement("small");
-    small.textContent = `${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}`;
-
-    div.append(title, small);
-    div.addEventListener("click", () => quickAddProduct(p.id));
-    box.appendChild(div);
-  });
-}
-
-function renderRecipes() {
-  renderIngredients();
-
-  const recipes = getRecipes();
-  const box = document.getElementById("recipeList");
-  const select = document.getElementById("recipeSelectToday");
-
-  if (select) {
-    clear(select);
-    recipes.forEach(r => {
-      const opt = document.createElement("option");
-      opt.value = r.id;
-      opt.textContent = r.name;
-      select.appendChild(opt);
-    });
-  }
-
-  if (!box) return;
-
-  clear(box);
-
-  if (!recipes.length) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "Nav recepšu.";
-    box.appendChild(p);
-    return;
-  }
-
-  recipes.forEach(r => {
-    const totals = calculateRecipeTotals(r);
-
-    const div = document.createElement("div");
-    div.className = "food-item";
-
-    const title = document.createElement("strong");
-    title.textContent = r.name;
-
-    const small = document.createElement("small");
-    small.textContent = `${totals.kcal} kcal kopā · ${r.yieldGrams}g`;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Dzēst";
-    btn.dataset.id = r.id;
-    btn.addEventListener("click", () => deleteRecipe(r.id));
-
-    div.append(title, small, btn);
-    box.appendChild(div);
-  });
-}
-
-function renderSettings() {
-  const s = getSettings();
-
-  document.getElementById("setKcal").value = s.kcal;
-  document.getElementById("setProtein").value = s.protein;
-  document.getElementById("setCarbs").value = s.carbs;
-  document.getElementById("setFat").value = s.fat;
-  document.getElementById("setWater").value = s.water;
-
-  const weights = JSON.parse(localStorage.getItem("weights")) || [];
-  const last = weights[weights.length - 1];
-
-  document.getElementById("lastWeight").textContent = last
-    ? `Pēdējais svars: ${last.weight} kg (${last.date})`
-    : "Nav svara ierakstu.";
-}
-
-function render() {
-  renderProducts();
-  renderOverview();
-  renderFoodList();
-  renderProducts();
-  renderRecipes();
-  renderSettings();
 }
 
 if ("serviceWorker" in navigator) {
@@ -905,98 +420,12 @@ function deleteTemplate(id) {
   renderTemplates();
 }
 
-function renderTemplates() {
-  const box = document.getElementById("templateList");
-  if (!box) return;
-
-  const templates = getTemplates();
-  box.innerHTML = "";
-
-  if (!templates.length) {
-    box.innerHTML = '<p class="muted">Nav šablonu.</p>';
-    return;
-  }
-
-  templates.forEach(t => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-
-    const title = document.createElement("strong");
-    title.textContent = t.name;
-
-    const addBtn = document.createElement("button");
-    addBtn.textContent = "Pievienot";
-    addBtn.onclick = () => applyTemplate(t.id);
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "Dzēst";
-    delBtn.onclick = () => deleteTemplate(t.id);
-
-    div.append(title, addBtn, delBtn);
-    box.appendChild(div);
-  });
-}
-
 /* ===== END V7.3 ===== */
 
 
 /* ===== V8 BARCODE LOOKUP ===== */
 
-async function lookupBarcode() {
-  const code = document.getElementById("barcodeInput").value.trim();
-  const status = document.getElementById("barcodeStatus");
-
-  function setStatus(msg) {
-    if (status) status.textContent = msg;
-  }
-
-  if (!code) {
-    setStatus("Ievadi EAN kodu.");
-    return;
-  }
-
-  setStatus("Meklē...");
-
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-    const data = await res.json();
-
-    if (data.status !== 1) {
-      setStatus("Produkts nav atrasts.");
-      return;
-    }
-
-    const p = data.product;
-
-    const name = p.product_name || "Nezināms produkts";
-    const nutr = p.nutriments || {};
-
-    const kcal = nutr["energy-kcal_100g"] || 0;
-    const protein = nutr.proteins_100g || 0;
-    const carbs = nutr.carbohydrates_100g || 0;
-    const fat = nutr.fat_100g || 0;
-
-    const products = getProducts();
-
-    products.push({
-      id: Date.now(),
-      name,
-      kcal,
-      protein,
-      carbs,
-      fat,
-      favorite: false
-    });
-
-    saveProducts(products);
-    renderProducts();
-
-    setStatus("Pievienots: " + name);
-
-  } catch (e) {
-    setStatus("API kļūda.");
-  }
-}
+async
 
 /* ===== END V8 ===== */
 
@@ -1006,86 +435,258 @@ async function lookupBarcode() {
 let barcodeStream = null;
 let barcodeScanTimer = null;
 
-async function startBarcodeCamera() {
-  const video = document.getElementById("barcodeVideo");
-  const status = document.getElementById("barcodeCameraStatus");
-
-  function setStatus(msg) {
-    if (status) status.textContent = msg;
-  }
-
-  if (!("BarcodeDetector" in window)) {
-    setStatus("Šis pārlūks neatbalsta BarcodeDetector. Lieto manuālo EAN ievadi.");
-    return;
-  }
-
-  try {
-    barcodeStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment"
-      }
-    });
-
-    video.srcObject = barcodeStream;
-    video.style.display = "block";
-    await video.play();
-
-    const detector = new BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
-    });
-
-    setStatus("Skenē...");
-
-    barcodeScanTimer = setInterval(async () => {
-      try {
-        const codes = await detector.detect(video);
-
-        if (codes && codes.length > 0) {
-          const code = codes[0].rawValue;
-
-          setStatus("Atrasts: " + code);
-          stopBarcodeCamera();
-
-          const input = document.getElementById("barcodeInput");
-          if (input) input.value = code;
-
-          if (typeof lookupBarcode === "function") {
-            lookupBarcode();
-          }
-        }
-      } catch (e) {
-        setStatus("Skenēšanas kļūda.");
-      }
-    }, 700);
-
-  } catch (e) {
-    setStatus("Kameru nevar palaist. Pārbaudi atļaujas.");
-  }
-}
-
-function stopBarcodeCamera() {
-  const video = document.getElementById("barcodeVideo");
-  const status = document.getElementById("barcodeCameraStatus");
-
-  if (barcodeScanTimer) {
-    clearInterval(barcodeScanTimer);
-    barcodeScanTimer = null;
-  }
-
-  if (barcodeStream) {
-    barcodeStream.getTracks().forEach(track => track.stop());
-    barcodeStream = null;
-  }
-
-  if (video) {
-    video.pause();
-    video.srcObject = null;
-    video.style.display = "none";
-  }
-
-  if (status && status.textContent === "Skenē...") {
-    status.textContent = "Kamera apturēta.";
-  }
-}
+async
 
 /* ===== END V9 ===== */
+
+/* === KK STABLE PATCH 2026-04-26 B === */
+
+function kkReadJSON(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+  catch { return fallback; }
+}
+function kkWriteJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+function num(v) { const n = Number(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
+function round1(v) { return Math.round(num(v) * 10) / 10; }
+
+function todayKey() {
+  const d = new Date();
+  return `foods_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function getProducts() { return kkReadJSON("kk_products", []); }
+function saveProducts(x) { kkWriteJSON("kk_products", x); }
+function getTodayFoods() { return kkReadJSON(todayKey(), []); }
+function saveTodayFoods(x) { kkWriteJSON(todayKey(), x); }
+
+function addProduct() {
+  const p = {
+    id: Date.now(),
+    name: document.getElementById("productName")?.value?.trim() || "",
+    kcal: num(document.getElementById("productKcal")?.value),
+    protein: num(document.getElementById("productProtein")?.value),
+    carbs: num(document.getElementById("productCarbs")?.value),
+    fat: num(document.getElementById("productFat")?.value),
+    barcode: document.getElementById("productBarcode")?.value?.trim() || ""
+  };
+  if (!p.name) return alert("Ievadi produkta nosaukumu.");
+  getProducts().push(p);
+  saveProducts([...getProducts().filter(x => x.id !== p.id), p]);
+  ["productName","productKcal","productProtein","productCarbs","productFat","productBarcode"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
+  render();
+}
+
+function deleteProduct(id) {
+  saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
+  render();
+}
+
+function renderProducts() {
+  const products = getProducts();
+  const select = document.getElementById("foodProductSelect");
+  const list = document.getElementById("productsList");
+
+  if (select) {
+    select.innerHTML = products.length
+      ? products.map(p => `<option value="${p.id}">${p.name}</option>`).join("")
+      : `<option value="">Nav produktu</option>`;
+  }
+
+  if (list) {
+    list.innerHTML = products.length ? products.map(p => `
+      <div class="row">
+        <div>
+          <strong>${p.name}</strong>
+          <div class="muted">${round1(p.kcal)} kcal · P ${round1(p.protein)} · O ${round1(p.carbs)} · T ${round1(p.fat)} / 100 g${p.barcode ? " · " + p.barcode : ""}</div>
+        </div>
+        <button onclick="deleteProduct('${p.id}')">Dzēst</button>
+      </div>
+    `).join("") : `<p class="muted">Produktu vēl nav.</p>`;
+  }
+}
+
+function addFoodFromProduct() {
+  const id = document.getElementById("foodProductSelect")?.value;
+  const grams = num(document.getElementById("foodGramsInput")?.value);
+  const meal = document.getElementById("mealSelect")?.value || "Ēdiens";
+  const p = getProducts().find(x => String(x.id) === String(id));
+
+  if (!p) return alert("Izvēlies produktu.");
+  if (grams <= 0) return alert("Ievadi gramus.");
+
+  const k = grams / 100;
+  const food = {
+    id: Date.now(),
+    productId: p.id,
+    name: p.name,
+    meal,
+    grams,
+    kcal: round1(p.kcal * k),
+    protein: round1(p.protein * k),
+    carbs: round1(p.carbs * k),
+    fat: round1(p.fat * k)
+  };
+
+  const foods = getTodayFoods();
+  foods.push(food);
+  saveTodayFoods(foods);
+
+  const gi = document.getElementById("foodGramsInput");
+  if (gi) gi.value = "";
+  render();
+}
+
+function deleteFood(id) {
+  saveTodayFoods(getTodayFoods().filter(f => String(f.id) !== String(id)));
+  render();
+}
+
+function renderFoods() {
+  const list = document.getElementById("foodList");
+  if (!list) return;
+
+  const foods = getTodayFoods();
+  list.innerHTML = foods.length ? foods.map(f => `
+    <div class="row">
+      <div>
+        <strong>${f.name}</strong>
+        <div class="muted">${f.meal} · ${round1(f.grams)} g · ${round1(f.kcal)} kcal · P ${round1(f.protein)} · O ${round1(f.carbs)} · T ${round1(f.fat)}</div>
+      </div>
+      <button onclick="deleteFood('${f.id}')">Dzēst</button>
+    </div>
+  `).join("") : `<p class="muted">Šodien vēl nav ievades.</p>`;
+}
+
+function totalsToday() {
+  return getTodayFoods().reduce((a, f) => {
+    a.kcal += num(f.kcal); a.protein += num(f.protein); a.carbs += num(f.carbs); a.fat += num(f.fat);
+    return a;
+  }, {kcal:0, protein:0, carbs:0, fat:0});
+}
+
+function renderMealSummary() {
+  const el = document.getElementById("mealSummary");
+  if (!el) return;
+  const t = totalsToday();
+  el.innerHTML = `
+    <div class="grid cards">
+      <div class="stat-card"><div class="muted">kcal</div><strong>${round1(t.kcal)}</strong></div>
+      <div class="stat-card"><div class="muted">Proteīns</div><strong>${round1(t.protein)} g</strong></div>
+      <div class="stat-card"><div class="muted">Ogļhidrāti</div><strong>${round1(t.carbs)} g</strong></div>
+      <div class="stat-card"><div class="muted">Tauki</div><strong>${round1(t.fat)} g</strong></div>
+    </div>`;
+}
+
+function calcWeightTrend() {
+  const weights = kkReadJSON("weights", []).map(w => ({...w, weight:num(w.weight)})).filter(w => w.weight > 0);
+  if (weights.length === 0) return "—";
+  if (weights.length === 1) return `${round1(weights[0].weight)} kg`;
+
+  const first = weights[0].weight;
+  const last = weights[weights.length - 1].weight;
+
+  if (weights.length <= 5) {
+    const diff = round1(last - first);
+    const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+    return `${round1(first)} → ${round1(last)} kg ${arrow} ${Math.abs(diff)} kg`;
+  }
+
+  const avg = arr => arr.reduce((s, x) => s + x.weight, 0) / arr.length;
+  const prev = avg(weights.slice(-6, -3));
+  const lastAvg = avg(weights.slice(-3));
+  const diff = round1(lastAvg - prev);
+  const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+  return `${round1(prev)} → ${round1(lastAvg)} kg ${arrow} ${Math.abs(diff)} kg`;
+}
+
+function renderAnalytics() {
+  const t = totalsToday();
+  const kcalEl = document.getElementById("todayKcal");
+  const proteinEl = document.getElementById("todayProtein");
+  const trendEl = document.getElementById("weightTrend");
+  if (kcalEl) kcalEl.textContent = `${round1(t.kcal)} kcal`;
+  if (proteinEl) proteinEl.textContent = `${round1(t.protein)} g`;
+  if (trendEl) trendEl.textContent = calcWeightTrend();
+}
+
+function exportData() {
+  const data = {};
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith("foods_") || key.startsWith("kk_") || key === "weights") data[key] = localStorage.getItem(key);
+  });
+  const d = new Date();
+  const filename = `kk-calories-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function importData(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      Object.entries(data).forEach(([key, value]) => {
+        if (key.startsWith("foods_") || key.startsWith("kk_") || key === "weights") localStorage.setItem(key, value);
+      });
+      render();
+      alert("Imports pabeigts.");
+    } catch {
+      alert("JSON imports neizdevās.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importProductsCsv(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
+    const products = getProducts();
+    lines.slice(1).forEach(line => {
+      const [name,kcal,protein,carbs,fat,barcode] = line.split(",").map(x => String(x || "").trim());
+      if (name) products.push({id:Date.now()+Math.random(), name, kcal:num(kcal), protein:num(protein), carbs:num(carbs), fat:num(fat), barcode:barcode || ""});
+    });
+    saveProducts(products);
+    render();
+  };
+  reader.readAsText(file);
+}
+
+function lookupBarcode() {
+  const code = document.getElementById("barcodeInput")?.value?.trim();
+  const status = document.getElementById("barcodeStatus");
+  const found = getProducts().find(p => p.barcode && p.barcode === code);
+  if (status) status.textContent = !code ? "Ievadi EAN kodu." : found ? `Atrasts: ${found.name}` : "Nav atrasts lokālajā produktu DB.";
+}
+
+function startBarcodeCamera() {
+  const status = document.getElementById("barcodeCameraStatus");
+  if (status) status.textContent = "Barcode kameras UI atjaunots. Automātiska skenēšana nav aktivizēta šajā stabilajā patch.";
+}
+function stopBarcodeCamera() {
+  const video = document.getElementById("barcodeVideo");
+  if (video?.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+  if (video) { video.srcObject = null; video.style.display = "none"; }
+  const status = document.getElementById("barcodeCameraStatus");
+  if (status) status.textContent = "Kamera apturēta.";
+}
+
+function render() {
+  renderProducts();
+  renderFoods();
+  renderMealSummary();
+  renderAnalytics();
+}
+
+document.addEventListener("DOMContentLoaded", render);
