@@ -186,9 +186,8 @@
       <section class="card">
         <h2>Eksports</h2>
         <button onclick="exportData()">Export JSON</button>
-        <button onclick="exportCSV()">Export CSV</button>
-        <textarea id="backupBox"></textarea>
-        <button onclick="importData()">Import JSON</button>
+        <input id="importJsonFile" type="file" accept=".json" onchange="importDataFromFile(event)" />
+        <p id="importStatus" class="muted"></p>
       </section>
     </section>
   </main>

@@ -414,32 +414,74 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
+
   Object.keys(localStorage).forEach(k => {
     if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") {
       data[k] = localStorage.getItem(k);
     }
   });
-  document.getElementById("backupBox").value = JSON.stringify(data, null, 2);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+  a.download = `kk-calories-${today}.json`;
+  a.click();
+
+  URL.revokeObjectURL(a.href);
 }
 
-function importData() {
-  try {
-    const data = JSON.parse(document.getElementById("backupBox").value);
+function importDataFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  const status = document.getElementById("importStatus");
 
-    const keys = Object.keys(data);
-    const invalid = keys.filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights"));
-
-    if (invalid.length) {
-      alert("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
-      return;
-    }
-
-    keys.forEach(k => localStorage.setItem(k, data[k]));
-    alert("Import OK.");
-    render();
-  } catch {
-    alert("Import kļūda.");
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
   }
+
+  if (!file) {
+    setStatus("Fails nav izvēlēts.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      const keys = Object.keys(data);
+
+      const invalid = keys.filter(k =>
+        !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights")
+      );
+
+      if (invalid.length) {
+        setStatus("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
+        alert("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
+        return;
+      }
+
+      keys.forEach(k => localStorage.setItem(k, data[k]));
+
+      setStatus("Import OK.");
+      alert("Import OK.");
+
+      event.target.value = "";
+      render();
+
+    } catch (err) {
+      setStatus("Import kļūda.");
+      alert("Import kļūda.");
+    }
+  };
+
+  reader.onerror = function() {
+    setStatus("Faila lasīšanas kļūda.");
+    alert("Faila lasīšanas kļūda.");
+  };
+
+  reader.readAsText(file);
 }
 
 function exportCSV() {
