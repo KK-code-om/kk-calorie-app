@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KK Calories V7.2 STABLE</title>
+  <title>KK Calories V7.2 FINAL</title>
 
-  <link rel="stylesheet" href="style.css?v=7.2-stable" />
-  <link rel="manifest" href="manifest.json?v=7.2-stable" />
+  <link rel="stylesheet" href="style.css?v=7.2-final" />
+  <link rel="manifest" href="manifest.json?v=7.2-final" />
 
   <meta name="theme-color" content="#ffffff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -32,7 +32,7 @@
           <button onclick="changeDay(1)">→</button>
         </div>
 
-        <div class="gauge" id="gauge">
+        <div class="gauge">
           <div class="gauge-value">
             <span id="totalKcal">0</span>
             <small>/<span id="targetKcal">1900</span> kcal</small>
@@ -42,10 +42,26 @@
       </section>
 
       <section class="macro-row">
-        <div class="mini-card"><span>🔥</span><b id="kcalMini">0</b><small>Kalorijas</small></div>
-        <div class="mini-card"><span>💪</span><b id="proteinMini">0 g</b><small>Proteīns</small></div>
-        <div class="mini-card"><span>🌾</span><b id="carbsMini">0 g</b><small>Ogļhidrāti</small></div>
-        <div class="mini-card"><span>💧</span><b id="fatMini">0 g</b><small>Tauki</small></div>
+        <div class="mini-card">
+          <span>🔥</span>
+          <b id="kcalMini">0</b>
+          <small>Kalorijas</small>
+        </div>
+        <div class="mini-card">
+          <span>💪</span>
+          <b id="proteinMini">0 g</b>
+          <small>Proteīns</small>
+        </div>
+        <div class="mini-card">
+          <span>🌾</span>
+          <b id="carbsMini">0 g</b>
+          <small>Ogļhidrāti</small>
+        </div>
+        <div class="mini-card">
+          <span>💧</span>
+          <b id="fatMini">0 g</b>
+          <small>Tauki</small>
+        </div>
       </section>
 
       <section class="card">
@@ -67,19 +83,12 @@
     <section id="nutrition" class="screen">
       <section class="card">
         <h2>Ātrā ievade</h2>
-        <input id="foodSearch" placeholder="Meklēt produktu..." oninput="renderQuickFoodPicker()" />
-        <input id="quickGrams" type="number" placeholder="Grami" value="100" />
-        <select id="quickMeal">
-          <option value="breakfast">Brokastis</option>
-          <option value="lunch">Pusdienas</option>
-          <option value="dinner">Vakariņas</option>
-          <option value="snack">Uzkoda</option>
-        </select>
-        <div id="quickFoodList"></div>
-      </section>
+<input id="foodSearch" placeholder="Meklēt produktu..." oninput="renderQuickFoodPicker()" />
+<input id="quickGrams" type="number" placeholder="Grami" value="100" />
+<div id="quickFoodList"></div>
 
-      <section class="card">
-        <h2>Produkts gramos</h2>
+        
+
         <select id="portionFood"></select>
         <input id="portionGrams" type="number" placeholder="Grami" />
         <select id="portionMeal">
@@ -122,14 +131,26 @@
       <section class="card">
         <h2>CSV import produktiem</h2>
         <p class="muted">Kolonnas: name,kcal,protein,carbs,fat</p>
-        <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat"></textarea>
-        <button onclick="importProductsCSV()">Importēt CSV</button>
+        <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Vārīta ola,155,13,1.1,11"></textarea>
+        <button id="csvImportBtn" type="button" onclick="kkCsvImportFinal()">Importēt CSV</button>
         <div id="csvImportStatus" class="import-status">CSV import gatavs.</div>
-      </section>
+</section>
 
       <section class="card">
-        <h2>Produktu DB</h2>
+        
+<section class="card">
+  <h2>🔍 Meklēt produktus (Open Food Facts)</h2>
+  <input id="offSearch" placeholder="piem: banana, rice, cheese" />
+  <button onclick="searchOFF()">Meklēt</button>
+  <div id="offResults"></div>
+</section>
+
+<h2>Produktu DB</h2>
         <input id="productSearch" placeholder="Meklēt produktu DB..." oninput="renderProducts()" />
+        <div class="filter-row">
+          <button type="button" id="productFavFilterBtn" onclick="toggleProductFavoritesFilter()">⭐ Tikai favorīti</button>
+          <button type="button" onclick="clearProductSearch()">Notīrīt</button>
+        </div>
         <div id="productList"></div>
       </section>
     </section>
@@ -195,6 +216,148 @@
     <button onclick="showTab('settings')" id="tab-settings">Set</button>
   </nav>
 
-  <script src="app.js?v=7.2-stable"></script>
+  <script src="app.js?v=7.2-final"></script>
+
+
+
+
+
+
+
+
+
+
+<script>
+function kkCsvImportFinal() {
+  var statusBox = document.getElementById("csvImportStatus");
+
+  function setStatus(msg) {
+    if (statusBox) statusBox.textContent = msg;
+  }
+
+  try {
+    setStatus("Import sākts...");
+
+    var box = document.getElementById("csvImportBox");
+    if (!box) {
+      setStatus("KĻŪDA: CSV lauks nav atrasts.");
+      alert("CSV lauks nav atrasts.");
+      return;
+    }
+
+    var raw = box.value;
+    if (!raw || raw.trim().length === 0) {
+      setStatus("CSV lauks ir tukšs.");
+      alert("CSV lauks ir tukšs.");
+      return;
+    }
+
+    var lines = raw.split(/\r?\n/);
+    var cleanLines = [];
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (line.length > 0) cleanLines.push(line);
+    }
+
+    if (cleanLines.length < 2) {
+      setStatus("CSV vajag header + vismaz 1 produktu.");
+      alert("CSV vajag header + vismaz 1 produktu.");
+      return;
+    }
+
+    var header = cleanLines[0].split(",");
+    for (var h = 0; h < header.length; h++) {
+      header[h] = header[h].trim().toLowerCase();
+    }
+
+    var idxName = header.indexOf("name");
+    var idxKcal = header.indexOf("kcal");
+    var idxProtein = header.indexOf("protein");
+    var idxCarbs = header.indexOf("carbs");
+    var idxFat = header.indexOf("fat");
+
+    if (idxName < 0 || idxKcal < 0 || idxProtein < 0 || idxCarbs < 0 || idxFat < 0) {
+      setStatus("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+      alert("Nepareizs header. Vajag: name,kcal,protein,carbs,fat");
+      return;
+    }
+
+    var productsRaw = localStorage.getItem("kk_products");
+    var products = [];
+
+    if (productsRaw) {
+      try {
+        products = JSON.parse(productsRaw);
+        if (!Array.isArray(products)) products = [];
+      } catch (e) {
+        products = [];
+      }
+    }
+
+    var added = 0;
+    var updated = 0;
+    var skipped = 0;
+
+    for (var r = 1; r < cleanLines.length; r++) {
+      var cols = cleanLines[r].split(",");
+
+      var name = (cols[idxName] || "").trim();
+      if (!name) {
+        skipped++;
+        continue;
+      }
+
+      var kcal = Number((cols[idxKcal] || "0").trim()) || 0;
+      var protein = Number((cols[idxProtein] || "0").trim()) || 0;
+      var carbs = Number((cols[idxCarbs] || "0").trim()) || 0;
+      var fat = Number((cols[idxFat] || "0").trim()) || 0;
+
+      var foundIndex = -1;
+      for (var j = 0; j < products.length; j++) {
+        var existing = String(products[j].name || "").toLowerCase().trim();
+        if (existing === name.toLowerCase().trim()) {
+          foundIndex = j;
+          break;
+        }
+      }
+
+      if (foundIndex >= 0) {
+        products[foundIndex].name = name;
+        products[foundIndex].kcal = kcal;
+        products[foundIndex].protein = protein;
+        products[foundIndex].carbs = carbs;
+        products[foundIndex].fat = fat;
+        products[foundIndex].favorite = Boolean(products[foundIndex].favorite);
+        updated++;
+      } else {
+        products.push({
+          id: Date.now() + Math.random(),
+          name: name,
+          kcal: kcal,
+          protein: protein,
+          carbs: carbs,
+          fat: fat,
+          favorite: false
+        });
+        added++;
+      }
+    }
+
+    localStorage.setItem("kk_products", JSON.stringify(products));
+
+    var msg = "CSV import OK. Pievienoti: " + added + ", Atjaunoti: " + updated + ", Izlaisti: " + skipped;
+    setStatus(msg);
+    alert(msg);
+
+    window.location.reload();
+
+  } catch (err) {
+    setStatus("KĻŪDA: " + err.message);
+    alert("CSV import kļūda: " + err.message);
+  }
+}
+</script>
+
 </body>
 </html>

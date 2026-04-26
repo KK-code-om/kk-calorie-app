@@ -9,6 +9,10 @@ const DEFAULT_SETTINGS = {
 let currentDate = new Date().toISOString().slice(0, 10);
 let currentIngredients = [];
 
+function num(v) {
+  return Number(String(v || "0").replace(",", ".").trim()) || 0;
+}
+
 function getSettings() {
   return JSON.parse(localStorage.getItem("kk_settings")) || DEFAULT_SETTINGS;
 }
@@ -26,8 +30,7 @@ function saveFoods(foods, date = currentDate) {
 }
 
 function getProducts() {
-  const saved = localStorage.getItem("kk_products");
-  return saved ? JSON.parse(saved) : [];
+  return JSON.parse(localStorage.getItem("kk_products")) || [];
 }
 
 function saveProducts(products) {
@@ -45,10 +48,8 @@ function saveRecipes(recipes) {
 function showTab(tab) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active-screen"));
   document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
-
   document.getElementById(tab).classList.add("active-screen");
   document.getElementById("tab-" + tab).classList.add("active");
-
   render();
 }
 
@@ -74,35 +75,48 @@ function addEntry(entry) {
 function addManualFood() {
   addEntry({
     name: document.getElementById("foodName").value || "Bez nosaukuma",
-    kcal: Number(document.getElementById("kcal").value) || 0,
-    protein: Number(document.getElementById("protein").value) || 0,
-    carbs: Number(document.getElementById("carbs").value) || 0,
-    fat: Number(document.getElementById("fat").value) || 0,
+    kcal: num(document.getElementById("kcal").value),
+    protein: num(document.getElementById("protein").value),
+    carbs: num(document.getElementById("carbs").value),
+    fat: num(document.getElementById("fat").value),
     mealType: "snack"
   });
 
   ["foodName", "kcal", "protein", "carbs", "fat"].forEach(id => document.getElementById(id).value = "");
 }
 
-function addPortionFood() {
-  const id = document.getElementById("portionFood").value;
-  const grams = Number(document.getElementById("portionGrams").value);
-  const meal = document.getElementById("portionMeal").value;
-  const p = getProducts().find(x => String(x.id) === String(id));
+function addProductByGrams(productId, grams, mealType) {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return alert("Produkts nav atrasts.");
 
-  if (!p || !grams) return alert("Izvēlies produktu un ievadi gramus.");
+  const g = num(grams);
+  if (!g || g <= 0) return alert("Ievadi gramus.");
 
-  const f = grams / 100;
+  const f = g / 100;
 
   addEntry({
-    name: `${p.name} ${grams}g`,
-    kcal: Math.round(p.kcal * f),
-    protein: +(p.protein * f).toFixed(1),
-    carbs: +(p.carbs * f).toFixed(1),
-    fat: +(p.fat * f).toFixed(1),
-    mealType: meal
+    name: `${p.name} ${g}g`,
+    kcal: Math.round(num(p.kcal) * f),
+    protein: +(num(p.protein) * f).toFixed(1),
+    carbs: +(num(p.carbs) * f).toFixed(1),
+    fat: +(num(p.fat) * f).toFixed(1),
+    mealType: mealType || "snack"
   });
 
+  touchRecentFood(productId);
+}
+
+function quickAddProduct(productId) {
+  const grams = document.getElementById("quickGrams").value;
+  const meal = document.getElementById("quickMeal").value;
+  addProductByGrams(productId, grams, meal);
+}
+
+function addPortionFood() {
+  const id = document.getElementById("portionFood").value;
+  const grams = document.getElementById("portionGrams").value;
+  const meal = document.getElementById("portionMeal").value;
+  addProductByGrams(id, grams, meal);
   document.getElementById("portionGrams").value = "";
 }
 
@@ -119,7 +133,7 @@ function resetDay() {
 }
 
 function saveProduct() {
-  const name = document.getElementById("pName").value;
+  const name = document.getElementById("pName").value.trim();
   if (!name) return alert("Ievadi nosaukumu.");
 
   const products = getProducts();
@@ -127,14 +141,14 @@ function saveProduct() {
   products.push({
     id: Date.now(),
     name,
-    kcal: Number(document.getElementById("pKcal").value) || 0,
-    protein: Number(document.getElementById("pProtein").value) || 0,
-    carbs: Number(document.getElementById("pCarbs").value) || 0,
-    fat: Number(document.getElementById("pFat").value) || 0
+    kcal: num(document.getElementById("pKcal").value),
+    protein: num(document.getElementById("pProtein").value),
+    carbs: num(document.getElementById("pCarbs").value),
+    fat: num(document.getElementById("pFat").value),
+    favorite: false
   });
 
   saveProducts(products);
-
   ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
   render();
 }
@@ -145,9 +159,86 @@ function deleteProduct(id) {
   render();
 }
 
+function touchRecentFood(productId) {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return;
+
+  let recent = JSON.parse(localStorage.getItem("kk_recent_foods")) || [];
+  recent = recent.filter(x => String(x.id) !== String(productId));
+  recent.unshift({ id: p.id, name: p.name });
+  localStorage.setItem("kk_recent_foods", JSON.stringify(recent.slice(0, 12)));
+}
+
+function importProductsCSV() {
+  const box = document.getElementById("csvImportBox");
+  const status = document.getElementById("csvImportStatus");
+
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
+  }
+
+  const raw = box.value.trim();
+  if (!raw) return alert("CSV lauks ir tukšs.");
+
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if (lines.length < 2) return alert("CSV vajag header + produktus.");
+
+  const header = lines[0].split(",").map(x => x.trim().toLowerCase());
+
+  const idx = {
+    name: header.indexOf("name"),
+    kcal: header.indexOf("kcal"),
+    protein: header.indexOf("protein"),
+    carbs: header.indexOf("carbs"),
+    fat: header.indexOf("fat")
+  };
+
+  if (idx.name < 0 || idx.kcal < 0 || idx.protein < 0 || idx.carbs < 0 || idx.fat < 0) {
+    return alert("Header jābūt: name,kcal,protein,carbs,fat");
+  }
+
+  const products = getProducts();
+  let added = 0, updated = 0, skipped = 0;
+
+  lines.slice(1).forEach(line => {
+    const c = line.split(",").map(x => x.trim());
+    const name = c[idx.name];
+
+    if (!name) {
+      skipped++;
+      return;
+    }
+
+    const item = {
+      name,
+      kcal: num(c[idx.kcal]),
+      protein: num(c[idx.protein]),
+      carbs: num(c[idx.carbs]),
+      fat: num(c[idx.fat])
+    };
+
+    const found = products.findIndex(p => String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim());
+
+    if (found >= 0) {
+      products[found] = { ...products[found], ...item, favorite: Boolean(products[found].favorite) };
+      updated++;
+    } else {
+      products.push({ id: Date.now() + Math.random(), ...item, favorite: false });
+      added++;
+    }
+  });
+
+  saveProducts(products);
+  box.value = "";
+  const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
+  setStatus(msg);
+  alert(msg);
+  render();
+}
+
 function addIngredient() {
   const id = document.getElementById("rProduct").value;
-  const grams = Number(document.getElementById("rGrams").value);
+  const grams = num(document.getElementById("rGrams").value);
   const p = getProducts().find(x => String(x.id) === String(id));
 
   if (!p || !grams) return alert("Izvēlies produktu un gramus.");
@@ -166,13 +257,8 @@ function renderIngredients() {
   currentIngredients.forEach((ing, index) => {
     const div = document.createElement("div");
     div.className = "quick-item";
-    div.innerHTML = `
-      <strong>${ing.name}</strong>
-      <small>${ing.grams} g</small>
-      <button onclick="removeIngredient(${index})">Dzēst</button>
-    `;
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
+    div.innerHTML = `<strong>${ing.name}</strong><small>${ing.grams} g</small><button onclick="removeIngredient(${index})">Dzēst</button>`;
+    box.appendChild(div);
   });
 }
 
@@ -190,10 +276,10 @@ function calculateRecipeTotals(recipe) {
     if (!p) return;
 
     const f = ing.grams / 100;
-    totals.kcal += p.kcal * f;
-    totals.protein += p.protein * f;
-    totals.carbs += p.carbs * f;
-    totals.fat += p.fat * f;
+    totals.kcal += num(p.kcal) * f;
+    totals.protein += num(p.protein) * f;
+    totals.carbs += num(p.carbs) * f;
+    totals.fat += num(p.fat) * f;
   });
 
   return {
@@ -205,25 +291,18 @@ function calculateRecipeTotals(recipe) {
 }
 
 function saveRecipe() {
-  const name = document.getElementById("rName").value;
-  const yieldGrams = Number(document.getElementById("rYield").value);
+  const name = document.getElementById("rName").value.trim();
+  const yieldGrams = num(document.getElementById("rYield").value);
 
   if (!name || !yieldGrams || currentIngredients.length === 0) {
     return alert("Vajag nosaukumu, gatavo svaru un sastāvdaļas.");
   }
 
   const recipes = getRecipes();
-
-  recipes.push({
-    id: Date.now(),
-    name,
-    yieldGrams,
-    ingredients: currentIngredients
-  });
-
+  recipes.push({ id: Date.now(), name, yieldGrams, ingredients: currentIngredients });
   saveRecipes(recipes);
-  currentIngredients = [];
 
+  currentIngredients = [];
   document.getElementById("rName").value = "";
   document.getElementById("rYield").value = "";
   render();
@@ -237,7 +316,7 @@ function deleteRecipe(id) {
 
 function addRecipePortion() {
   const id = document.getElementById("recipeSelectToday").value;
-  const grams = Number(document.getElementById("recipeConsumedGrams").value);
+  const grams = num(document.getElementById("recipeConsumedGrams").value);
   const r = getRecipes().find(x => String(x.id) === String(id));
 
   if (!r || !grams) return alert("Izvēlies recepti un gramus.");
@@ -258,26 +337,26 @@ function addRecipePortion() {
 }
 
 function saveWeight() {
-  const weight = Number(document.getElementById("weightInput").value);
+  const weight = num(document.getElementById("weightInput").value);
   if (!weight) return;
 
   let weights = JSON.parse(localStorage.getItem("weights")) || [];
   weights = weights.filter(w => w.date !== currentDate);
   weights.push({ date: currentDate, weight });
   weights.sort((a, b) => a.date.localeCompare(b.date));
-
   localStorage.setItem("weights", JSON.stringify(weights));
+
   document.getElementById("weightInput").value = "";
   render();
 }
 
 function saveSettings() {
   const s = {
-    kcal: Number(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal,
-    protein: Number(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein,
-    carbs: Number(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs,
-    fat: Number(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat,
-    water: Number(document.getElementById("setWater").value) || DEFAULT_SETTINGS.water
+    kcal: num(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal,
+    protein: num(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein,
+    carbs: num(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs,
+    fat: num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat,
+    water: num(document.getElementById("setWater").value) || DEFAULT_SETTINGS.water
   };
 
   saveSettingsData(s);
@@ -287,13 +366,11 @@ function saveSettings() {
 
 function exportData() {
   const data = {};
-
   Object.keys(localStorage).forEach(k => {
     if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") {
       data[k] = localStorage.getItem(k);
     }
   });
-
   document.getElementById("backupBox").value = JSON.stringify(data, null, 2);
 }
 
@@ -317,140 +394,97 @@ function exportCSV() {
     .forEach(k => {
       const date = k.replace("foods_", "");
       const foods = JSON.parse(localStorage.getItem(k)) || [];
-      foods.forEach(f => {
-        rows.push([
-          date,
-          f.mealType || "",
-          f.name || "",
-          f.kcal || 0,
-          f.protein || 0,
-          f.carbs || 0,
-          f.fat || 0
-        ]);
-      });
+      foods.forEach(f => rows.push([date, f.mealType || "", f.name, f.kcal, f.protein, f.carbs, f.fat]));
     });
 
-  document.getElementById("backupBox").value = rows.map(r => r.join(",")).join("\n");
-}
-
-function getTotals(date = currentDate) {
-  return getFoods(date).reduce((a, f) => {
-    a.kcal += Number(f.kcal) || 0;
-    a.protein += Number(f.protein) || 0;
-    a.carbs += Number(f.carbs) || 0;
-    a.fat += Number(f.fat) || 0;
-    return a;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-}
-
-function percent(v, target) {
-  if (!target) return 0;
-  return Math.min(100, Math.round((v / target) * 100));
-}
-
-function getLast7Dates() {
-  const dates = [];
-  const base = new Date(currentDate);
-
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(base);
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-
-  return dates;
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kk-calories.csv";
+  a.click();
 }
 
 function renderOverview() {
+  const foods = getFoods();
   const s = getSettings();
-  const t = getTotals();
+
+  const totals = foods.reduce((a, f) => {
+    a.kcal += num(f.kcal);
+    a.protein += num(f.protein);
+    a.carbs += num(f.carbs);
+    a.fat += num(f.fat);
+    return a;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
   document.getElementById("datePicker").value = currentDate;
   document.getElementById("dateLabel").textContent = currentDate;
-
-  document.getElementById("totalKcal").textContent = Math.round(t.kcal);
+  document.getElementById("totalKcal").textContent = Math.round(totals.kcal);
   document.getElementById("targetKcal").textContent = s.kcal;
-  document.getElementById("remainingKcal").textContent = Math.round(s.kcal - t.kcal);
+  document.getElementById("remainingKcal").textContent = Math.round(s.kcal - totals.kcal);
+  document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
+  document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
+  document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
+  document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
 
-  document.querySelector(".gauge").style.setProperty("--p", percent(t.kcal, s.kcal) + "%");
+  const pct = Math.min(100, Math.round((totals.kcal / s.kcal) * 100));
+  document.getElementById("gauge").style.setProperty("--p", pct + "%");
 
-  document.getElementById("kcalMini").textContent = Math.round(t.kcal);
-  document.getElementById("proteinMini").textContent = t.protein.toFixed(1) + " g";
-  document.getElementById("carbsMini").textContent = t.carbs.toFixed(1) + " g";
-  document.getElementById("fatMini").textContent = t.fat.toFixed(1) + " g";
-
-  renderMealSummary();
+  renderMealSummary(totals);
   renderAnalytics();
 }
 
 function renderMealSummary() {
-  const meals = [
-    ["breakfast", "Brokastis"],
-    ["lunch", "Pusdienas"],
-    ["dinner", "Vakariņas"],
-    ["snack", "Uzkodas"]
-  ];
-
-  const foods = getFoods();
   const box = document.getElementById("mealSummary");
+  const foods = getFoods();
+
+  const names = {
+    breakfast: "Brokastis",
+    lunch: "Pusdienas",
+    dinner: "Vakariņas",
+    snack: "Uzkodas"
+  };
+
   box.innerHTML = "";
 
-  meals.forEach(([key, label]) => {
-    const kcal = foods
-      .filter(f => f.mealType === key)
-      .reduce((a, f) => a + (Number(f.kcal) || 0), 0);
-
+  Object.keys(names).forEach(meal => {
+    const kcal = foods.filter(f => f.mealType === meal).reduce((a, f) => a + num(f.kcal), 0);
     const div = document.createElement("div");
     div.className = "meal-box";
-    div.innerHTML = `
-      <div>
-        <b>${label}</b>
-        <small>${foods.filter(f => f.mealType === key).length} ieraksti</small>
-      </div>
-      <strong>${Math.round(kcal)} kcal</strong>
-    `;
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
+    div.innerHTML = `<div><b>${names[meal]}</b><small>${Math.round(kcal)} kcal</small></div>`;
+    box.appendChild(div);
   });
 }
 
 function renderAnalytics() {
   const s = getSettings();
-  const dates = getLast7Dates();
-  const totals = dates.map(d => getTotals(d));
+  let total7 = 0;
 
-  const kcalDays = totals.map(t => t.kcal);
-  const avg = kcalDays.reduce((a, b) => a + b, 0) / 7;
-
-  const proteinOkDays = totals.filter(t => t.protein >= s.protein).length;
-  const compliance = Math.round((proteinOkDays / 7) * 100);
-
-  const deficit = Math.round(s.kcal - avg);
-
-  const weights = JSON.parse(localStorage.getItem("weights")) || [];
-  const lastWeights = weights.slice(-7);
-
-  let trend = "—";
-  if (lastWeights.length >= 2) {
-    const diff = +(lastWeights[lastWeights.length - 1].weight - lastWeights[0].weight).toFixed(1);
-    trend = diff > 0 ? `+${diff} kg` : `${diff} kg`;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    total7 += getFoods(key).reduce((a, f) => a + num(f.kcal), 0);
   }
 
-  document.getElementById("avgKcal7").textContent = Math.round(avg);
-  document.getElementById("proteinCompliance").textContent = compliance + "%";
-  document.getElementById("deficitCalc").textContent = deficit;
-  document.getElementById("weightTrend").textContent = trend;
+  const avg = Math.round(total7 / 7);
+  const todayProtein = getFoods().reduce((a, f) => a + num(f.protein), 0);
+
+  document.getElementById("avgKcal7").textContent = avg;
+  document.getElementById("proteinCompliance").textContent = Math.round((todayProtein / s.protein) * 100) + "%";
+  document.getElementById("deficitCalc").textContent = Math.round(s.kcal - avg);
+  document.getElementById("weightTrend").textContent = "—";
 }
 
 function renderFoodList() {
-  const list = document.getElementById("foodList");
-  if (!list) return;
+  const box = document.getElementById("foodList");
+  if (!box) return;
 
   const foods = getFoods();
-  list.innerHTML = "";
+  box.innerHTML = "";
 
   if (!foods.length) {
-    list.innerHTML = "<p>Nav ierakstu.</p>";
+    box.innerHTML = '<p class="muted">Nav ierakstu.</p>';
     return;
   }
 
@@ -459,89 +493,118 @@ function renderFoodList() {
     div.className = "food-item";
     div.innerHTML = `
       <strong>${f.name}</strong>
-      <small>${f.mealType || ""}</small>
-      <small>${f.kcal} kcal | P ${f.protein} | C ${f.carbs} | F ${f.fat}</small>
-      <button onclick="deleteFood('${f.id}')">Dzēst</button>
+      <small>${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}</small>
+      <button onclick="deleteFood(${f.id})">Dzēst</button>
     `;
-    list.appendChild(div);
+    box.appendChild(div);
   });
 }
 
-
 function renderProducts() {
+  const products = getProducts();
+  const q = String(document.getElementById("productSearch")?.value || "").toLowerCase().trim();
+
+  const filtered = q
+    ? products.filter(p => String(p.name || "").toLowerCase().includes(q))
+    : products;
+
   const box = document.getElementById("productList");
+  if (box) {
+    box.innerHTML = "";
+
+    if (!filtered.length) {
+      box.innerHTML = '<p class="muted">Nav produktu.</p>';
+    } else {
+      filtered.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "food-item";
+        div.innerHTML = `
+          <strong>${p.name}</strong>
+          <small>${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}</small>
+          <button onclick="deleteProduct(${p.id})">Dzēst</button>
+        `;
+        box.appendChild(div);
+      });
+    }
+  }
+
+  const portion = document.getElementById("portionFood");
+  if (portion) {
+    portion.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+  }
+
+  const rProduct = document.getElementById("rProduct");
+  if (rProduct) {
+    rProduct.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+  }
+
+  renderQuickFoodPicker();
+}
+
+function renderQuickFoodPicker() {
+  const box = document.getElementById("quickFoodList");
   if (!box) return;
 
-  const products = getProducts();
+  const q = String(document.getElementById("foodSearch")?.value || "").toLowerCase().trim();
+  let products = getProducts();
+
+  if (q) {
+    products = products.filter(p => String(p.name || "").toLowerCase().includes(q));
+  }
+
+  products = products.slice(0, 12);
 
   box.innerHTML = "";
 
   if (!products.length) {
-    box.innerHTML = "<p>Nav produktu.</p>";
+    box.innerHTML = '<p class="muted">Nav atrastu produktu.</p>';
     return;
   }
 
   products.forEach(p => {
     const div = document.createElement("div");
-    div.className = "food-item";
-
+    div.className = "quick-item";
+    div.style.cursor = "pointer";
     div.innerHTML = `
       <strong>${p.name}</strong>
-      <small>${p.kcal} kcal | P:${p.protein} C:${p.carbs} F:${p.fat}</small>
-      <button onclick="deleteProduct(${p.id})">Dzēst</button>
+      <small>${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}</small>
     `;
-
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
+    div.onclick = () => quickAddProduct(p.id);
+    box.appendChild(div);
   });
 }
 
-
 function renderRecipes() {
-  const recipes = getRecipes();
+  renderIngredients();
 
+  const recipes = getRecipes();
+  const box = document.getElementById("recipeList");
   const select = document.getElementById("recipeSelectToday");
+
   if (select) {
-    select.innerHTML = "";
-    recipes.forEach(r => {
-      const opt = document.createElement("option");
-      opt.value = r.id;
-      opt.textContent = r.name;
-      select.appendChild(opt);
-    });
+    select.innerHTML = recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
   }
 
-  const list = document.getElementById("recipeList");
-  if (!list) return;
+  if (!box) return;
 
-  list.innerHTML = "";
+  box.innerHTML = "";
 
   if (!recipes.length) {
-    list.innerHTML = "<p>Nav recepšu.</p>";
+    box.innerHTML = '<p class="muted">Nav recepšu.</p>';
     return;
   }
 
   recipes.forEach(r => {
-    const t = calculateRecipeTotals(r);
-    const per100 = r.yieldGrams ? {
-      kcal: Math.round(t.kcal / r.yieldGrams * 100),
-      protein: +(t.protein / r.yieldGrams * 100).toFixed(1),
-      carbs: +(t.carbs / r.yieldGrams * 100).toFixed(1),
-      fat: +(t.fat / r.yieldGrams * 100).toFixed(1)
-    } : t;
-
+    const totals = calculateRecipeTotals(r);
     const div = document.createElement("div");
-    div.className = "quick-item";
+    div.className = "food-item";
     div.innerHTML = `
       <strong>${r.name}</strong>
-      <small>Kopā: ${t.kcal} kcal | ${r.yieldGrams} g</small>
-      <small>100g: ${per100.kcal} kcal | P ${per100.protein} | C ${per100.carbs} | F ${per100.fat}</small>
-      <button onclick="deleteRecipe('${r.id}')">Dzēst</button>
+      <small>${totals.kcal} kcal kopā · ${r.yieldGrams}g</small>
+      <button onclick="deleteRecipe(${r.id})">Dzēst</button>
     `;
-    list.appendChild(div);
+    box.appendChild(div);
   });
-
-  renderIngredients();
 }
 
 function renderSettings() {
@@ -570,540 +633,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.2-final");
+  navigator.serviceWorker.register("service-worker.js?v=7.2-stable");
 }
 
 render();
-
-
-/* ===== KK CALORIE APP V5: SEARCH + FAVORITES + RECENT ===== */
-
-let showFavoritesOnly = false;
-let showProductFavoritesOnly = false;
-
-function normalizeText(v) {
-  return String(v || "").toLowerCase().trim();
-}
-
-function getRecentFoods() {
-  return JSON.parse(localStorage.getItem("kk_recent_foods")) || [];
-}
-
-function saveRecentFoods(items) {
-  localStorage.setItem("kk_recent_foods", JSON.stringify(items.slice(0, 12)));
-}
-
-function touchRecentFood(productId) {
-  const p = getProducts().find(x => String(x.id) === String(productId));
-  if (!p) return;
-
-  let items = getRecentFoods().filter(x => String(x.id) !== String(productId));
-  items.unshift({
-    id: p.id,
-    name: p.name,
-    kcal: p.kcal,
-    protein: p.protein,
-    carbs: p.carbs,
-    fat: p.fat
-  });
-
-  saveRecentFoods(items);
-}
-
-function toggleFavorite(productId) {
-  const products = getProducts().map(p => {
-    if (String(p.id) === String(productId)) {
-      return { ...p, favorite: !Boolean(p.favorite) };
-    }
-    return { ...p, favorite: Boolean(p.favorite) };
-  });
-
-  saveProducts(products);
-  render();
-}
-
-function toggleFavoritesFilter() {
-  showFavoritesOnly = !showFavoritesOnly;
-  renderQuickFoodPicker();
-}
-
-function toggleProductFavoritesFilter() {
-  showProductFavoritesOnly = !showProductFavoritesOnly;
-  renderProducts();
-}
-
-function clearFoodSearch() {
-  const el = document.getElementById("foodSearch");
-  if (el) el.value = "";
-  showFavoritesOnly = false;
-  renderQuickFoodPicker();
-}
-
-function clearProductSearch() {
-  const el = document.getElementById("productSearch");
-  if (el) el.value = "";
-  showProductFavoritesOnly = false;
-  renderProducts();
-}
-
-function getFilteredProductsForQuick() {
-  const q = normalizeText(document.getElementById("foodSearch")?.value);
-  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
-
-  if (showFavoritesOnly) {
-    products = products.filter(p => p.favorite);
-  }
-
-  if (q) {
-    products = products.filter(p => normalizeText(p.name).includes(q));
-  }
-
-  products.sort((a, b) => {
-    if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
-    return normalizeText(a.name).localeCompare(normalizeText(b.name));
-  });
-
-  return products;
-}
-
-function getFilteredProductsForDb() {
-  const q = normalizeText(document.getElementById("productSearch")?.value);
-  let products = getProducts().map(p => ({ ...p, favorite: Boolean(p.favorite) }));
-
-  if (showProductFavoritesOnly) {
-    products = products.filter(p => p.favorite);
-  }
-
-  if (q) {
-    products = products.filter(p => normalizeText(p.name).includes(q));
-  }
-
-  products.sort((a, b) => {
-    if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
-    return normalizeText(a.name).localeCompare(normalizeText(b.name));
-  });
-
-  return products;
-}
-
-
-function quickAddProduct(productId, grams = null, meal = "snack") {
-  const p = getProducts().find(x => String(x.id) === String(productId));
-  if (!p) return alert("Produkts nav atrasts.");
-
-  const gramsInput = document.getElementById("quickGrams");
-  const g = grams || Number(gramsInput?.value) || 100;
-
-  if (!g || g <= 0) return alert("Ievadi gramus.");
-
-  const mealSelect = document.getElementById("portionMeal");
-  const mealType = mealSelect ? mealSelect.value : meal;
-
-  const f = g / 100;
-
-  addEntry({
-    name: `${p.name} ${g}g`,
-    kcal: Math.round((p.kcal || 0) * f),
-    protein: +((p.protein || 0) * f).toFixed(1),
-    carbs: +((p.carbs || 0) * f).toFixed(1),
-    fat: +((p.fat || 0) * f).toFixed(1),
-    mealType
-  });
-}
- ${g}g`,
-    kcal: Math.round(Number(p.kcal || 0) * f),
-    protein: +(Number(p.protein || 0) * f).toFixed(1),
-    carbs: +(Number(p.carbs || 0) * f).toFixed(1),
-    fat: +(Number(p.fat || 0) * f).toFixed(1),
-    mealType: meal
-  });
-
-  touchRecentFood(productId);
-}
-
-function renderRecentFoods() {
-  const box = document.getElementById("recentFoodsBox");
-  if (!box) return;
-
-  const items = getRecentFoods();
-  if (!items.length) {
-    box.innerHTML = "";
-    return;
-  }
-
-  box.innerHTML = `
-    <div class="recent-title">Nesen lietotie</div>
-    <div class="recent-row">
-      ${items.slice(0, 6).map(p => `
-        <button type="button" class="chip" onclick="quickAddProduct(${JSON.stringify(p.id)})">${p.name}</button>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodPicker");
-  const favBtn = document.getElementById("favFilterBtn");
-  if (!box) return;
-
-  if (favBtn) {
-    favBtn.classList.toggle("active-filter", showFavoritesOnly);
-  }
-
-  renderRecentFoods();
-
-  const products = getFilteredProductsForQuick().slice(0, 30);
-
-  if (!products.length) {
-    box.innerHTML = `<p class="muted">Nav atrastu produktu.</p>`;
-    return;
-  }
-
-  box.innerHTML = products.map(p => `
-    <div class="product-row">
-      <button type="button" class="favorite-star" onclick="toggleFavorite(${JSON.stringify(p.id)})">
-        ${p.favorite ? "⭐" : "☆"}
-      </button>
-      <button type="button" class="product-main-btn" onclick="quickAddProduct(${JSON.stringify(p.id)})">
-        <strong>${p.name}</strong>
-        <small>${Number(p.kcal || 0)} kcal / 100g · P ${Number(p.protein || 0)} · O ${Number(p.carbs || 0)} · T ${Number(p.fat || 0)}</small>
-      </button>
-    </div>
-  `).join("");
-}
-
-
-function renderProducts() {
-  const box = document.getElementById("productList");
-  if (!box) return;
-
-  const products = getProducts();
-
-  box.innerHTML = "";
-
-  if (!products.length) {
-    box.innerHTML = "<p>Nav produktu.</p>";
-    return;
-  }
-
-  products.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "food-item";
-
-    div.innerHTML = `
-      <strong>${p.name}</strong>
-      <small>${p.kcal} kcal | P:${p.protein} C:${p.carbs} F:${p.fat}</small>
-      <button onclick="deleteProduct(${p.id})">Dzēst</button>
-    `;
-
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
-  });
-}
-
-
-/* ===== END V5 ===== */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ===== V7.3 OPEN FOOD FACTS SAFE SEARCH ===== */
-
-let offResultsCache = [];
-
-async function searchOFF() {
-  const q = document.getElementById("offSearch").value.trim();
-  const box = document.getElementById("offResults");
-
-  if (!q) {
-    alert("Ievadi produktu");
-    return;
-  }
-
-  box.innerHTML = "Meklē...";
-
-  const url =
-    "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" +
-    encodeURIComponent(q) +
-    "&search_simple=1&action=process&json=1&page_size=20";
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error("HTTP " + res.status);
-    }
-
-    const data = await res.json();
-    offResultsCache = [];
-
-    box.innerHTML = "";
-
-    if (!data.products || !data.products.length) {
-      box.innerHTML = "<p>Nav rezultātu.</p>";
-      return;
-    }
-
-    data.products.forEach(p => {
-      const n = p.nutriments || {};
-      const name = p.product_name || p.generic_name || p.brands || "Bez nosaukuma";
-
-      const kcal = Math.round(
-        n["energy-kcal_100g"] ||
-        n["energy-kcal"] ||
-        n.energy_kcal_100g ||
-        0
-      );
-
-      const protein = Number(n.proteins_100g || 0);
-      const carbs = Number(n.carbohydrates_100g || 0);
-      const fat = Number(n.fat_100g || 0);
-
-      if (!name || !kcal) return;
-
-      const item = {
-        name,
-        kcal,
-        protein: +protein.toFixed(1),
-        carbs: +carbs.toFixed(1),
-        fat: +fat.toFixed(1)
-      };
-
-      const index = offResultsCache.push(item) - 1;
-
-      const div = document.createElement("div");
-      div.className = "food-item";
-      div.innerHTML = `
-        <strong>${item.name}</strong>
-        <small>${item.kcal} kcal | P:${item.protein} C:${item.carbs} F:${item.fat}</small>
-        <button onclick="addOFFProductByIndex(${index})">+ Pievienot</button>
-      `;
-
-      div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
-    });
-
-    if (!box.innerHTML.trim()) {
-      box.innerHTML = "<p>Rezultāti bija, bet bez kcal / makro datiem.</p>";
-    }
-
-  } catch (e) {
-    box.innerHTML = `
-      <p><b>Kļūda API:</b> ${e.message}</p>
-      <p class="muted">Atver šo testam: Open Food Facts var būt bloķēts pārlūkā vai service worker cache vēl nav nomainījies.</p>
-    `;
-  }
-}
-
-function addOFFProductByIndex(index) {
-  const item = offResultsCache[index];
-  if (!item) {
-    alert("Produkts nav atrasts.");
-    return;
-  }
-
-  const products = getProducts();
-
-  products.push({
-    id: Date.now(),
-    name: item.name,
-    kcal: item.kcal,
-    protein: item.protein,
-    carbs: item.carbs,
-    fat: item.fat,
-    favorite: false
-  });
-
-  saveProducts(products);
-  render();
-
-  alert("Pievienots: " + item.name);
-}
-
-/* ===== END V7.3 ===== */
-
-
-/* ===== V7.1 QUICK ADD + FAVORITES ===== */
-
-function quickAddProduct(productId, grams = 100, meal = "snack") {
-  const p = getProducts().find(x => String(x.id) === String(productId));
-  if (!p) return;
-
-  const f = grams / 100;
-
-  addEntry({
-    name: `${p.name} ${grams}g`,
-    kcal: Math.round(p.kcal * f),
-    protein: +(p.protein * f).toFixed(1),
-    carbs: +(p.carbs * f).toFixed(1),
-    fat: +(p.fat * f).toFixed(1),
-    mealType: meal
-  });
-
-  if (typeof touchRecentFood === "function") {
-    touchRecentFood(productId);
-  }
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodList");
-  if (!box) return;
-
-  const searchEl = document.getElementById("foodSearch");
-  const search = searchEl ? String(searchEl.value || "").toLowerCase() : "";
-
-  let products = getProducts();
-
-  if (search) {
-    products = products.filter(p => (p.name || "").toLowerCase().includes(search));
-  }
-
-  const recent = JSON.parse(localStorage.getItem("kk_recent_foods") || "[]");
-
-  box.innerHTML = "";
-
-  products.slice(0, 6).forEach(p => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.innerHTML = `
-      <strong>${p.name}</strong>
-      <button onclick="quickAddProduct(${p.id},100)">+100g</button>
-    `;
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
-  });
-
-  recent.slice(0, 4).forEach(p => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.innerHTML = `
-      ⏱ <strong>${p.name}</strong>
-      <button onclick="quickAddProduct(${p.id},100)">+100g</button>
-    `;
-    div.onclick = () => quickAddProduct(p.id,100);
-box.appendChild(div);
-  });
-}
-
-document.addEventListener("input", e => {
-  if (e.target && e.target.id === "foodSearch") {
-    renderQuickFoodPicker();
-  }
-});
-
-
-/* ===== V7.2 FINAL GRAM QUICK ADD ===== */
-
-function kkNumber(v) {
-  return Number(String(v || "0").replace(",", ".").trim()) || 0;
-}
-
-function quickAddProduct(productId, grams, meal) {
-  const products = getProducts();
-  const p = products.find(x => String(x.id) === String(productId));
-
-  if (!p) {
-    alert("Produkts nav atrasts.");
-    return;
-  }
-
-  const gramsInput = document.getElementById("quickGrams");
-  const g = grams ? kkNumber(grams) : kkNumber(gramsInput ? gramsInput.value : 100);
-
-  if (!g || g <= 0) {
-    alert("Ievadi gramus.");
-    return;
-  }
-
-  const mealSelect = document.getElementById("portionMeal");
-  const mealType = meal || (mealSelect ? mealSelect.value : "snack");
-  const f = g / 100;
-
-  addEntry({
-    name: p.name + " " + g + "g",
-    kcal: Math.round(kkNumber(p.kcal) * f),
-    protein: +(kkNumber(p.protein) * f).toFixed(1),
-    carbs: +(kkNumber(p.carbs) * f).toFixed(1),
-    fat: +(kkNumber(p.fat) * f).toFixed(1),
-    mealType: mealType
-  });
-
-  if (typeof touchRecentFood === "function") {
-    touchRecentFood(productId);
-  }
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodList");
-  if (!box) return;
-
-  const searchEl = document.getElementById("foodSearch");
-  const q = String(searchEl ? searchEl.value : "").toLowerCase().trim();
-
-  let products = getProducts();
-
-  if (q) {
-    products = products.filter(p =>
-      String(p.name || "").toLowerCase().includes(q)
-    );
-  }
-
-  products = products.slice(0, 12);
-
-  if (!products.length) {
-    box.innerHTML = '<p class="muted">Nav atrastu produktu.</p>';
-    return;
-  }
-
-  box.innerHTML = "";
-
-  products.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.style.cursor = "pointer";
-    div.innerHTML =
-      "<strong>" + p.name + "</strong>" +
-      "<small>" + kkNumber(p.kcal) + " kcal / 100g · P " + kkNumber(p.protein) +
-      " · O " + kkNumber(p.carbs) + " · T " + kkNumber(p.fat) + "</small>";
-
-    div.onclick = function() {
-      quickAddProduct(p.id);
-    };
-
-    box.appendChild(div);
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  renderQuickFoodPicker();
-
-  const foodSearch = document.getElementById("foodSearch");
-  if (foodSearch) {
-    foodSearch.addEventListener("input", renderQuickFoodPicker);
-  }
-});
-
-const kkOriginalRenderV72Final = render;
-render = function() {
-  kkOriginalRenderV72Final();
-  renderQuickFoodPicker();
-};
-
-/* ===== END V7.2 FINAL ===== */
