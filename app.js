@@ -13,6 +13,10 @@ function num(v) {
   return Number(String(v || "0").replace(",", ".").trim()) || 0;
 }
 
+function clear(el) {
+  if (el) el.textContent = "";
+}
+
 function getSettings() {
   return JSON.parse(localStorage.getItem("kk_settings")) || DEFAULT_SETTINGS;
 }
@@ -45,31 +49,55 @@ function saveRecipes(recipes) {
   localStorage.setItem("kk_recipes", JSON.stringify(recipes));
 }
 
+function refreshFoodViews() {
+  renderOverview();
+  renderFoodList();
+  renderQuickFoodPicker();
+}
+
+function refreshProductViews() {
+  renderProducts();
+  renderQuickFoodPicker();
+  renderRecipes();
+}
+
 function showTab(tab) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active-screen"));
   document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
+
   document.getElementById(tab).classList.add("active-screen");
   document.getElementById("tab-" + tab).classList.add("active");
-  render();
+
+  if (tab === "overview") renderOverview();
+  if (tab === "nutrition") {
+    renderFoodList();
+    renderProducts();
+    renderQuickFoodPicker();
+  }
+  if (tab === "products") renderProducts();
+  if (tab === "recipes") renderRecipes();
+  if (tab === "settings") renderSettings();
 }
 
 function changeDay(offset) {
   const d = new Date(currentDate);
   d.setDate(d.getDate() + offset);
   currentDate = d.toISOString().slice(0, 10);
-  render();
+  renderOverview();
+  renderFoodList();
 }
 
 function setDateFromPicker() {
   currentDate = document.getElementById("datePicker").value;
-  render();
+  renderOverview();
+  renderFoodList();
 }
 
 function addEntry(entry) {
   const foods = getFoods();
   foods.push({ id: Date.now() + Math.random(), ...entry });
   saveFoods(foods);
-  render();
+  refreshFoodViews();
 }
 
 function addManualFood() {
@@ -107,29 +135,33 @@ function addProductByGrams(productId, grams, mealType) {
 }
 
 function quickAddProduct(productId) {
-  const grams = document.getElementById("quickGrams").value;
-  const meal = document.getElementById("quickMeal").value;
-  addProductByGrams(productId, grams, meal);
+  addProductByGrams(
+    productId,
+    document.getElementById("quickGrams").value,
+    document.getElementById("quickMeal").value
+  );
 }
 
 function addPortionFood() {
-  const id = document.getElementById("portionFood").value;
-  const grams = document.getElementById("portionGrams").value;
-  const meal = document.getElementById("portionMeal").value;
-  addProductByGrams(id, grams, meal);
+  addProductByGrams(
+    document.getElementById("portionFood").value,
+    document.getElementById("portionGrams").value,
+    document.getElementById("portionMeal").value
+  );
+
   document.getElementById("portionGrams").value = "";
 }
 
 function deleteFood(id) {
   if (!confirm("Dzēst ierakstu?")) return;
   saveFoods(getFoods().filter(f => String(f.id) !== String(id)));
-  render();
+  refreshFoodViews();
 }
 
 function resetDay() {
   if (!confirm("Dzēst izvēlēto dienu?")) return;
   localStorage.removeItem("foods_" + currentDate);
-  render();
+  refreshFoodViews();
 }
 
 function saveProduct() {
@@ -150,13 +182,13 @@ function saveProduct() {
 
   saveProducts(products);
   ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
-  render();
+  refreshProductViews();
 }
 
 function deleteProduct(id) {
   if (!confirm("Dzēst produktu?")) return;
   saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
-  render();
+  refreshProductViews();
 }
 
 function touchRecentFood(productId) {
@@ -230,10 +262,11 @@ function importProductsCSV() {
 
   saveProducts(products);
   box.value = "";
+
   const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
   setStatus(msg);
   alert(msg);
-  render();
+  refreshProductViews();
 }
 
 function addIngredient() {
@@ -252,12 +285,24 @@ function renderIngredients() {
   const box = document.getElementById("ingredientList");
   if (!box) return;
 
-  box.innerHTML = "";
+  clear(box);
 
   currentIngredients.forEach((ing, index) => {
     const div = document.createElement("div");
     div.className = "quick-item";
-    div.innerHTML = `<strong>${ing.name}</strong><small>${ing.grams} g</small><button onclick="removeIngredient(${index})">Dzēst</button>`;
+
+    const name = document.createElement("strong");
+    name.textContent = ing.name;
+
+    const grams = document.createElement("small");
+    grams.textContent = `${ing.grams} g`;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Dzēst";
+    btn.dataset.index = index;
+    btn.addEventListener("click", () => removeIngredient(index));
+
+    div.append(name, grams, btn);
     box.appendChild(div);
   });
 }
@@ -305,18 +350,19 @@ function saveRecipe() {
   currentIngredients = [];
   document.getElementById("rName").value = "";
   document.getElementById("rYield").value = "";
-  render();
+  renderRecipes();
 }
 
 function deleteRecipe(id) {
   if (!confirm("Dzēst recepti?")) return;
   saveRecipes(getRecipes().filter(r => String(r.id) !== String(id)));
-  render();
+  renderRecipes();
 }
 
 function addRecipePortion() {
   const id = document.getElementById("recipeSelectToday").value;
   const grams = num(document.getElementById("recipeConsumedGrams").value);
+  const meal = document.getElementById("recipeMealToday")?.value || "dinner";
   const r = getRecipes().find(x => String(x.id) === String(id));
 
   if (!r || !grams) return alert("Izvēlies recepti un gramus.");
@@ -330,7 +376,7 @@ function addRecipePortion() {
     protein: +(totals.protein * f).toFixed(1),
     carbs: +(totals.carbs * f).toFixed(1),
     fat: +(totals.fat * f).toFixed(1),
-    mealType: "dinner"
+    mealType: meal
   });
 
   document.getElementById("recipeConsumedGrams").value = "";
@@ -347,7 +393,8 @@ function saveWeight() {
   localStorage.setItem("weights", JSON.stringify(weights));
 
   document.getElementById("weightInput").value = "";
-  render();
+  renderSettings();
+  renderAnalytics();
 }
 
 function saveSettings() {
@@ -361,7 +408,8 @@ function saveSettings() {
 
   saveSettingsData(s);
   alert("Settings saglabāti.");
-  render();
+  renderSettings();
+  renderOverview();
 }
 
 function exportData() {
@@ -377,7 +425,16 @@ function exportData() {
 function importData() {
   try {
     const data = JSON.parse(document.getElementById("backupBox").value);
-    Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+
+    const keys = Object.keys(data);
+    const invalid = keys.filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights"));
+
+    if (invalid.length) {
+      alert("Import atteikts. Nezināmas atslēgas: " + invalid.join(", "));
+      return;
+    }
+
+    keys.forEach(k => localStorage.setItem(k, data[k]));
     alert("Import OK.");
     render();
   } catch {
@@ -430,7 +487,7 @@ function renderOverview() {
   const pct = Math.min(100, Math.round((totals.kcal / s.kcal) * 100));
   document.getElementById("gauge").style.setProperty("--p", pct + "%");
 
-  renderMealSummary(totals);
+  renderMealSummary();
   renderAnalytics();
 }
 
@@ -445,13 +502,23 @@ function renderMealSummary() {
     snack: "Uzkodas"
   };
 
-  box.innerHTML = "";
+  clear(box);
 
   Object.keys(names).forEach(meal => {
     const kcal = foods.filter(f => f.mealType === meal).reduce((a, f) => a + num(f.kcal), 0);
+
     const div = document.createElement("div");
     div.className = "meal-box";
-    div.innerHTML = `<div><b>${names[meal]}</b><small>${Math.round(kcal)} kcal</small></div>`;
+
+    const wrap = document.createElement("div");
+    const title = document.createElement("b");
+    title.textContent = names[meal];
+
+    const small = document.createElement("small");
+    small.textContent = `${Math.round(kcal)} kcal`;
+
+    wrap.append(title, small);
+    div.appendChild(wrap);
     box.appendChild(div);
   });
 }
@@ -473,7 +540,25 @@ function renderAnalytics() {
   document.getElementById("avgKcal7").textContent = avg;
   document.getElementById("proteinCompliance").textContent = Math.round((todayProtein / s.protein) * 100) + "%";
   document.getElementById("deficitCalc").textContent = Math.round(s.kcal - avg);
-  document.getElementById("weightTrend").textContent = "—";
+
+  const weights = (JSON.parse(localStorage.getItem("weights")) || [])
+    .filter(w => w && w.date && num(w.weight))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (weights.length < 6) {
+    document.getElementById("weightTrend").textContent = "—";
+    return;
+  }
+
+  const last3 = weights.slice(-3);
+  const prev3 = weights.slice(-6, -3);
+
+  const avgLast = last3.reduce((a, w) => a + num(w.weight), 0) / last3.length;
+  const avgPrev = prev3.reduce((a, w) => a + num(w.weight), 0) / prev3.length;
+  const diff = +(avgLast - avgPrev).toFixed(1);
+
+  const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
+  document.getElementById("weightTrend").textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
 }
 
 function renderFoodList() {
@@ -481,21 +566,32 @@ function renderFoodList() {
   if (!box) return;
 
   const foods = getFoods();
-  box.innerHTML = "";
+  clear(box);
 
   if (!foods.length) {
-    box.innerHTML = '<p class="muted">Nav ierakstu.</p>';
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Nav ierakstu.";
+    box.appendChild(p);
     return;
   }
 
   foods.forEach(f => {
     const div = document.createElement("div");
     div.className = "food-item";
-    div.innerHTML = `
-      <strong>${f.name}</strong>
-      <small>${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}</small>
-      <button onclick="deleteFood(${f.id})">Dzēst</button>
-    `;
+
+    const title = document.createElement("strong");
+    title.textContent = f.name;
+
+    const small = document.createElement("small");
+    small.textContent = `${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}`;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Dzēst";
+    btn.dataset.id = f.id;
+    btn.addEventListener("click", () => deleteFood(f.id));
+
+    div.append(title, small, btn);
     box.appendChild(div);
   });
 }
@@ -509,20 +605,32 @@ function renderProducts() {
     : products;
 
   const box = document.getElementById("productList");
+
   if (box) {
-    box.innerHTML = "";
+    clear(box);
 
     if (!filtered.length) {
-      box.innerHTML = '<p class="muted">Nav produktu.</p>';
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "Nav produktu.";
+      box.appendChild(p);
     } else {
       filtered.forEach(p => {
         const div = document.createElement("div");
         div.className = "food-item";
-        div.innerHTML = `
-          <strong>${p.name}</strong>
-          <small>${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}</small>
-          <button onclick="deleteProduct(${p.id})">Dzēst</button>
-        `;
+
+        const title = document.createElement("strong");
+        title.textContent = p.name;
+
+        const small = document.createElement("small");
+        small.textContent = `${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}`;
+
+        const btn = document.createElement("button");
+        btn.textContent = "Dzēst";
+        btn.dataset.id = p.id;
+        btn.addEventListener("click", () => deleteProduct(p.id));
+
+        div.append(title, small, btn);
         box.appendChild(div);
       });
     }
@@ -530,12 +638,24 @@ function renderProducts() {
 
   const portion = document.getElementById("portionFood");
   if (portion) {
-    portion.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+    clear(portion);
+    products.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      portion.appendChild(opt);
+    });
   }
 
   const rProduct = document.getElementById("rProduct");
   if (rProduct) {
-    rProduct.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+    clear(rProduct);
+    products.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      rProduct.appendChild(opt);
+    });
   }
 
   renderQuickFoodPicker();
@@ -554,10 +674,13 @@ function renderQuickFoodPicker() {
 
   products = products.slice(0, 12);
 
-  box.innerHTML = "";
+  clear(box);
 
   if (!products.length) {
-    box.innerHTML = '<p class="muted">Nav atrastu produktu.</p>';
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Nav atrastu produktu.";
+    box.appendChild(p);
     return;
   }
 
@@ -565,11 +688,16 @@ function renderQuickFoodPicker() {
     const div = document.createElement("div");
     div.className = "quick-item";
     div.style.cursor = "pointer";
-    div.innerHTML = `
-      <strong>${p.name}</strong>
-      <small>${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}</small>
-    `;
-    div.onclick = () => quickAddProduct(p.id);
+    div.dataset.id = p.id;
+
+    const title = document.createElement("strong");
+    title.textContent = p.name;
+
+    const small = document.createElement("small");
+    small.textContent = `${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}`;
+
+    div.append(title, small);
+    div.addEventListener("click", () => quickAddProduct(p.id));
     box.appendChild(div);
   });
 }
@@ -582,27 +710,45 @@ function renderRecipes() {
   const select = document.getElementById("recipeSelectToday");
 
   if (select) {
-    select.innerHTML = recipes.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+    clear(select);
+    recipes.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      select.appendChild(opt);
+    });
   }
 
   if (!box) return;
 
-  box.innerHTML = "";
+  clear(box);
 
   if (!recipes.length) {
-    box.innerHTML = '<p class="muted">Nav recepšu.</p>';
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Nav recepšu.";
+    box.appendChild(p);
     return;
   }
 
   recipes.forEach(r => {
     const totals = calculateRecipeTotals(r);
+
     const div = document.createElement("div");
     div.className = "food-item";
-    div.innerHTML = `
-      <strong>${r.name}</strong>
-      <small>${totals.kcal} kcal kopā · ${r.yieldGrams}g</small>
-      <button onclick="deleteRecipe(${r.id})">Dzēst</button>
-    `;
+
+    const title = document.createElement("strong");
+    title.textContent = r.name;
+
+    const small = document.createElement("small");
+    small.textContent = `${totals.kcal} kcal kopā · ${r.yieldGrams}g`;
+
+    const btn = document.createElement("button");
+    btn.textContent = "Dzēst";
+    btn.dataset.id = r.id;
+    btn.addEventListener("click", () => deleteRecipe(r.id));
+
+    div.append(title, small, btn);
     box.appendChild(div);
   });
 }
