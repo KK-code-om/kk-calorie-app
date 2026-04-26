@@ -9,7 +9,7 @@ html, body {
 
 .app {
   width: 100%; max-width: 560px;
-  margin: 0 auto; padding: 0 16px 100px;
+  margin: 0 auto; padding: 0 16px 40px;
 }
 
 .screen { display: none; }
@@ -64,7 +64,8 @@ button:active { opacity: 0.75; }
 }
 .date-input {
   background: #fff; border: none; border-radius: 14px;
-  padding: 12px; font-size: 15px; font-family: 'DM Sans', Arial, sans-serif;
+  padding: 12px; font-size: 15px;
+  font-family: 'DM Sans', Arial, sans-serif;
   text-align: center; color: #1a1a1a;
   box-shadow: 0 2px 8px rgba(0,0,0,0.07); width: 100%;
 }
@@ -106,7 +107,7 @@ button:active { opacity: 0.75; }
   box-shadow: 0 2px 12px rgba(0,0,0,0.05);
 }
 
-/* DASHBOARD CARDS */
+/* DASHBOARD 6-CARD GRID */
 .dash-grid {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 12px; margin-bottom: 14px;
@@ -114,19 +115,17 @@ button:active { opacity: 0.75; }
 .dash-card {
   border-radius: 24px; padding: 20px 18px;
   cursor: pointer; position: relative;
-  min-height: 120px; display: flex; flex-direction: column;
-  justify-content: flex-end; transition: transform 0.15s, opacity 0.15s;
+  min-height: 110px; display: flex; flex-direction: column;
+  justify-content: flex-end;
+  transition: transform 0.15s, opacity 0.15s;
 }
 .dash-card:active { transform: scale(0.97); opacity: 0.9; }
-.dash-icon { font-size: 28px; margin-bottom: 8px; display: block; }
-.dash-label {
-  font-size: 17px; font-weight: 800; color: #fff;
-  line-height: 1.2;
-}
-.dash-sub { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.dash-icon { font-size: 26px; margin-bottom: 8px; display: block; }
+.dash-label { font-size: 16px; font-weight: 800; color: #fff; line-height: 1.2; }
+.dash-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
 .dash-arrow {
-  position: absolute; top: 18px; right: 18px;
-  font-size: 20px; color: rgba(255,255,255,0.35);
+  position: absolute; top: 16px; right: 16px;
+  font-size: 18px; color: rgba(255,255,255,0.3);
 }
 
 /* MEAL SUMMARY */
@@ -139,11 +138,33 @@ button:active { opacity: 0.75; }
 .meal-row small { display: block; font-size: 11px; color: #aaa; margin-top: 2px; }
 .meal-kcal { font-size: 16px; font-weight: 800; color: #e8533a; flex-shrink: 0; }
 
-/* ANALYTICS */
-.analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.analytics-tile { background: #f8f7f4; border-radius: 18px; padding: 14px; }
-.analytics-tile b { display: block; font-size: 22px; font-weight: 800; }
-.analytics-tile small { display: block; font-size: 12px; color: #aaa; margin-top: 3px; }
+/* ANALYTICS SCREEN */
+.analytics-grid-full {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.analytics-tile-big {
+  background: #fff; border-radius: 24px; padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+}
+.analytics-tile-big b { display: block; font-size: 28px; font-weight: 800; }
+.analytics-tile-big small { display: block; font-size: 12px; color: #aaa; margin-top: 4px; }
+
+.weekly-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #f0ede8;
+}
+.weekly-row:last-child { border-bottom: none; }
+.weekly-row span { font-size: 14px; color: #aaa; }
+.weekly-row b { font-size: 15px; font-weight: 700; }
+
+/* WEIGHT HISTORY */
+.weight-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #f0ede8;
+}
+.weight-row:last-child { border-bottom: none; }
+.weight-row span { font-size: 13px; color: #aaa; }
+.weight-row b { font-size: 16px; font-weight: 700; }
 
 /* FORM FIELDS */
 .field {
@@ -155,10 +176,11 @@ button:active { opacity: 0.75; }
 .field:focus { outline: 2px solid #e8533a; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-textarea, textarea.field {
-  width: 100%; min-height: 140px;
-  font-family: 'DM Mono', monospace; font-size: 13px;
-  line-height: 1.4; resize: vertical;
+textarea {
+  width: 100%; min-height: 140px; background: #f8f7f4;
+  border: none; border-radius: 14px; padding: 13px 14px;
+  font-family: monospace; font-size: 13px; line-height: 1.4; resize: vertical;
+  color: #1a1a1a;
 }
 
 /* FOOD / PRODUCT ITEMS */
@@ -195,38 +217,20 @@ textarea, textarea.field {
   background: #f8f7f4; color: #1a1a1a; font-weight: 600; font-size: 13px;
 }
 
-/* CSV */
 #csvImportBox {
   display: block !important; width: 100% !important;
   min-height: 150px !important; background: #f8f7f4 !important;
   color: #1a1a1a !important; border: none !important;
   border-radius: 14px !important; padding: 13px 14px !important;
-  margin-bottom: 8px !important; font-family: 'DM Mono', monospace !important;
+  margin-bottom: 8px !important; font-family: monospace !important;
   font-size: 13px !important; line-height: 1.4 !important;
 }
-
-/* BOTTOM NAV */
-.bottom-nav {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  background: #fff; display: grid; grid-template-columns: repeat(5, 1fr);
-  padding: 8px 4px 20px;
-  box-shadow: 0 -1px 0 #ece9e3, 0 -8px 24px rgba(0,0,0,0.06);
-  z-index: 100;
-}
-.bottom-nav button {
-  background: transparent; color: #bbb;
-  padding: 6px 2px; font-size: 11px; font-weight: 500;
-  border-radius: 14px; display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
-}
-.bottom-nav button.active { color: #e8533a; }
-.nav-icon { font-size: 20px; line-height: 1; }
 
 @media (max-width: 390px) {
   h1 { font-size: 22px; }
   .gauge-num { font-size: 34px; }
   .macro-tile { padding: 10px 4px; }
   .macro-tile b { font-size: 12px; }
-  .dash-card { min-height: 100px; padding: 16px 14px; }
-  .dash-label { font-size: 15px; }
+  .dash-card { min-height: 95px; padding: 14px 12px; }
+  .dash-label { font-size: 14px; }
 }

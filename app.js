@@ -1,10 +1,4 @@
-const DEFAULT_SETTINGS = {
-  kcal: 1900,
-  protein: 130,
-  carbs: 190,
-  fat: 70,
-  water: 2000
-};
+const DEFAULT_SETTINGS = { kcal: 1900, protein: 130, carbs: 190, fat: 70, water: 2000 };
 
 const STARTER_PRODUCTS = [
   { id: 1001, name: "Banāns", kcal: 89, protein: 1.1, carbs: 23.0, fat: 0.3, favorite: false },
@@ -15,75 +9,48 @@ const STARTER_PRODUCTS = [
   { id: 1006, name: "Instant oatmeal", kcal: 370, protein: 13.0, carbs: 60.0, fat: 7.0, favorite: false }
 ];
 
+const DAY_NAMES = ["Svētdiena","Pirmdiena","Otrdiena","Trešdiena","Ceturtdiena","Piektdiena","Sestdiena"];
+
 let currentDate = new Date().toISOString().slice(0, 10);
 let currentIngredients = [];
 
-function num(v) {
-  return Number(String(v || "0").replace(",", ".").trim()) || 0;
-}
+function num(v) { return Number(String(v || "0").replace(",", ".").trim()) || 0; }
+function clear(el) { if (el) el.textContent = ""; }
+function getSettings() { return JSON.parse(localStorage.getItem("kk_settings")) || DEFAULT_SETTINGS; }
+function saveSettingsData(s) { localStorage.setItem("kk_settings", JSON.stringify(s)); }
+function getFoods(date = currentDate) { return JSON.parse(localStorage.getItem("foods_" + date)) || []; }
+function saveFoods(foods, date = currentDate) { localStorage.setItem("foods_" + date, JSON.stringify(foods)); }
+function getProducts() { return JSON.parse(localStorage.getItem("kk_products")) || []; }
+function saveProducts(p) { localStorage.setItem("kk_products", JSON.stringify(p)); }
+function ensureStarterProducts() { if (getProducts().length === 0) saveProducts(STARTER_PRODUCTS); }
+function getRecipes() { return JSON.parse(localStorage.getItem("kk_recipes")) || []; }
+function saveRecipes(r) { localStorage.setItem("kk_recipes", JSON.stringify(r)); }
+function getTemplates() { return JSON.parse(localStorage.getItem("kk_meal_templates")) || []; }
+function saveTemplates(t) { localStorage.setItem("kk_meal_templates", JSON.stringify(t)); }
 
-function clear(el) {
-  if (el) el.textContent = "";
-}
-
-function getSettings() {
-  return JSON.parse(localStorage.getItem("kk_settings")) || DEFAULT_SETTINGS;
-}
-
-function saveSettingsData(s) {
-  localStorage.setItem("kk_settings", JSON.stringify(s));
-}
-
-function getFoods(date = currentDate) {
-  return JSON.parse(localStorage.getItem("foods_" + date)) || [];
-}
-
-function saveFoods(foods, date = currentDate) {
-  localStorage.setItem("foods_" + date, JSON.stringify(foods));
-}
-
-function getProducts() {
-  return JSON.parse(localStorage.getItem("kk_products")) || [];
-}
-
-function saveProducts(products) {
-  localStorage.setItem("kk_products", JSON.stringify(products));
-}
-
-function ensureStarterProducts() {
-  if (getProducts().length === 0) saveProducts(STARTER_PRODUCTS);
-}
-
-function getRecipes() {
-  return JSON.parse(localStorage.getItem("kk_recipes")) || [];
-}
-
-function saveRecipes(recipes) {
-  localStorage.setItem("kk_recipes", JSON.stringify(recipes));
-}
-
-function refreshFoodViews() {
-  renderOverview();
-  renderFoodList();
-  renderQuickFoodPicker();
-}
-
-function refreshProductViews() {
-  renderProducts();
-  renderQuickFoodPicker();
-  renderRecipes();
+function updateDayLabel() {
+  const d = new Date(currentDate + "T12:00:00");
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  let label;
+  if (currentDate === today) label = "Šodien — " + DAY_NAMES[d.getDay()];
+  else if (currentDate === yesterday) label = "Vakar — " + DAY_NAMES[d.getDay()];
+  else if (currentDate === tomorrow) label = "Rīt — " + DAY_NAMES[d.getDay()];
+  else label = DAY_NAMES[d.getDay()];
+  const el = document.getElementById("dayName");
+  if (el) el.textContent = label;
 }
 
 function showTab(tab) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active-screen"));
-  document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
   document.getElementById(tab).classList.add("active-screen");
-  const tabBtn = document.getElementById("tab-" + tab);
-  if (tabBtn) tabBtn.classList.add("active");
   if (tab === "overview") renderOverview();
-  if (tab === "nutrition") { renderFoodList(); renderProducts(); renderQuickFoodPicker(); }
+  if (tab === "nutrition") { renderFoodList(); renderProducts(); }
   if (tab === "products") renderProducts();
   if (tab === "recipes") renderRecipes();
+  if (tab === "analytics") renderAnalytics();
+  if (tab === "weight") renderWeight();
   if (tab === "settings") renderSettings();
 }
 
@@ -105,7 +72,8 @@ function addEntry(entry) {
   const foods = getFoods();
   foods.push({ id: Date.now() + Math.random(), ...entry });
   saveFoods(foods);
-  refreshFoodViews();
+  renderOverview();
+  renderFoodList();
 }
 
 function addManualFood() {
@@ -117,7 +85,7 @@ function addManualFood() {
     fat: num(document.getElementById("fat").value),
     mealType: "snack"
   });
-  ["foodName", "kcal", "protein", "carbs", "fat"].forEach(id => document.getElementById(id).value = "");
+  ["foodName","kcal","protein","carbs","fat"].forEach(id => document.getElementById(id).value = "");
 }
 
 function addProductByGrams(productId, grams, mealType) {
@@ -134,13 +102,6 @@ function addProductByGrams(productId, grams, mealType) {
     fat: +(num(p.fat) * f).toFixed(1),
     mealType: mealType || "snack"
   });
-  touchRecentFood(productId);
-}
-
-function quickAddProduct(productId) {
-  addProductByGrams(productId,
-    document.getElementById("quickGrams")?.value,
-    document.getElementById("quickMeal")?.value);
 }
 
 function addPortionFood() {
@@ -155,13 +116,13 @@ function addPortionFood() {
 function deleteFood(id) {
   if (!confirm("Dzēst ierakstu?")) return;
   saveFoods(getFoods().filter(f => String(f.id) !== String(id)));
-  refreshFoodViews();
+  renderOverview(); renderFoodList();
 }
 
 function resetDay() {
   if (!confirm("Dzēst izvēlēto dienu?")) return;
   localStorage.removeItem("foods_" + currentDate);
-  refreshFoodViews();
+  renderOverview(); renderFoodList();
 }
 
 function saveProduct() {
@@ -177,23 +138,14 @@ function saveProduct() {
     favorite: false
   });
   saveProducts(products);
-  ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
-  refreshProductViews();
+  ["pName","pKcal","pProtein","pCarbs","pFat"].forEach(id => document.getElementById(id).value = "");
+  renderProducts();
 }
 
 function deleteProduct(id) {
   if (!confirm("Dzēst produktu?")) return;
   saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
-  refreshProductViews();
-}
-
-function touchRecentFood(productId) {
-  const p = getProducts().find(x => String(x.id) === String(productId));
-  if (!p) return;
-  let recent = JSON.parse(localStorage.getItem("kk_recent_foods")) || [];
-  recent = recent.filter(x => String(x.id) !== String(productId));
-  recent.unshift({ id: p.id, name: p.name });
-  localStorage.setItem("kk_recent_foods", JSON.stringify(recent.slice(0, 12)));
+  renderProducts();
 }
 
 function importProductsCSV() {
@@ -205,12 +157,8 @@ function importProductsCSV() {
   const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   if (lines.length < 2) return alert("CSV vajag header + produktus.");
   const header = lines[0].split(",").map(x => x.trim().toLowerCase());
-  const idx = {
-    name: header.indexOf("name"), kcal: header.indexOf("kcal"),
-    protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat")
-  };
-  if (idx.name < 0 || idx.kcal < 0 || idx.protein < 0 || idx.carbs < 0 || idx.fat < 0)
-    return alert("Header jābūt: name,kcal,protein,carbs,fat");
+  const idx = { name: header.indexOf("name"), kcal: header.indexOf("kcal"), protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat") };
+  if (idx.name < 0 || idx.kcal < 0) return alert("Header jābūt: name,kcal,protein,carbs,fat");
   const products = getProducts();
   let added = 0, updated = 0, skipped = 0;
   lines.slice(1).forEach(line => {
@@ -218,14 +166,14 @@ function importProductsCSV() {
     const name = c[idx.name];
     if (!name) { skipped++; return; }
     const item = { name, kcal: num(c[idx.kcal]), protein: num(c[idx.protein]), carbs: num(c[idx.carbs]), fat: num(c[idx.fat]) };
-    const found = products.findIndex(p => String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim());
-    if (found >= 0) { products[found] = { ...products[found], ...item, favorite: Boolean(products[found].favorite) }; updated++; }
-    else { products.push({ id: Date.now() + Math.floor(Math.random() * 10000), ...item, favorite: false }); added++; }
+    const found = products.findIndex(p => String(p.name||"").toLowerCase().trim() === name.toLowerCase().trim());
+    if (found >= 0) { products[found] = { ...products[found], ...item }; updated++; }
+    else { products.push({ id: Date.now() + Math.floor(Math.random()*10000), ...item, favorite: false }); added++; }
   });
   saveProducts(products);
   box.value = "";
-  const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
-  setStatus(msg); alert(msg); refreshProductViews();
+  const msg = `CSV OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
+  setStatus(msg); alert(msg); renderProducts();
 }
 
 function addIngredient() {
@@ -243,23 +191,13 @@ function renderIngredients() {
   if (!box) return;
   clear(box);
   currentIngredients.forEach((ing, index) => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    const name = document.createElement("strong");
-    name.textContent = ing.name;
-    const grams = document.createElement("small");
-    grams.textContent = `${ing.grams} g`;
-    const btn = document.createElement("button");
-    btn.textContent = "Dzēst";
-    btn.addEventListener("click", () => removeIngredient(index));
-    div.append(name, grams, btn);
-    box.appendChild(div);
+    const div = document.createElement("div"); div.className = "quick-item";
+    const name = document.createElement("strong"); name.textContent = ing.name;
+    const g = document.createElement("small"); g.textContent = ing.grams + " g";
+    const btn = document.createElement("button"); btn.textContent = "Dzēst";
+    btn.addEventListener("click", () => { currentIngredients.splice(index, 1); renderIngredients(); });
+    div.append(name, g, btn); box.appendChild(div);
   });
-}
-
-function removeIngredient(index) {
-  currentIngredients.splice(index, 1);
-  renderIngredients();
 }
 
 function calculateRecipeTotals(recipe) {
@@ -269,8 +207,7 @@ function calculateRecipeTotals(recipe) {
     const p = products.find(x => String(x.id) === String(ing.productId));
     if (!p) return;
     const f = ing.grams / 100;
-    t.kcal += num(p.kcal) * f; t.protein += num(p.protein) * f;
-    t.carbs += num(p.carbs) * f; t.fat += num(p.fat) * f;
+    t.kcal += num(p.kcal)*f; t.protein += num(p.protein)*f; t.carbs += num(p.carbs)*f; t.fat += num(p.fat)*f;
   });
   return { kcal: Math.round(t.kcal), protein: +t.protein.toFixed(1), carbs: +t.carbs.toFixed(1), fat: +t.fat.toFixed(1) };
 }
@@ -278,8 +215,7 @@ function calculateRecipeTotals(recipe) {
 function saveRecipe() {
   const name = document.getElementById("rName").value.trim();
   const yieldGrams = num(document.getElementById("rYield").value);
-  if (!name || !yieldGrams || currentIngredients.length === 0)
-    return alert("Vajag nosaukumu, gatavo svaru un sastāvdaļas.");
+  if (!name || !yieldGrams || currentIngredients.length === 0) return alert("Vajag nosaukumu, gatavo svaru un sastāvdaļas.");
   const recipes = getRecipes();
   recipes.push({ id: Date.now(), name, yieldGrams, ingredients: currentIngredients });
   saveRecipes(recipes);
@@ -323,7 +259,7 @@ function saveWeight() {
   weights.sort((a, b) => a.date.localeCompare(b.date));
   localStorage.setItem("weights", JSON.stringify(weights));
   document.getElementById("weightInput").value = "";
-  renderSettings(); renderAnalytics();
+  renderWeight(); renderAnalytics();
 }
 
 function saveSettings() {
@@ -334,76 +270,58 @@ function saveSettings() {
     fat: num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat,
     water: num(document.getElementById("setWater").value) || DEFAULT_SETTINGS.water
   };
-  saveSettingsData(s);
-  alert("Settings saglabāti.");
-  renderSettings(); renderOverview();
+  saveSettingsData(s); alert("Saglabāts."); renderSettings(); renderOverview();
 }
 
 function exportData() {
   const data = {};
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") data[k] = localStorage.getItem(k);
-  });
-  const today = new Date().toISOString().slice(0, 10);
+  Object.keys(localStorage).forEach(k => { if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") data[k] = localStorage.getItem(k); });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `kk-calories-${today}.json`;
-  a.click(); URL.revokeObjectURL(a.href);
+  a.href = URL.createObjectURL(blob); a.download = `kk-calories-${new Date().toISOString().slice(0,10)}.json`; a.click();
 }
 
 function importDataFromFile(event) {
   const file = event.target.files && event.target.files[0];
   const status = document.getElementById("importStatus");
-  function setStatus(msg) { if (status) status.textContent = msg; }
-  if (!file) { setStatus("Fails nav izvēlēts."); return; }
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      const keys = Object.keys(data);
-      const invalid = keys.filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights"));
-      if (invalid.length) { setStatus("Import atteikts: " + invalid.join(", ")); alert("Import atteikts: " + invalid.join(", ")); return; }
-      keys.forEach(k => localStorage.setItem(k, data[k]));
-      setStatus("Import OK."); alert("Import OK.");
-      event.target.value = ""; renderAll();
-    } catch (err) { setStatus("Import kļūda."); alert("Import kļūda."); }
+      const invalid = Object.keys(data).filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights"));
+      if (invalid.length) { alert("Import atteikts: " + invalid.join(", ")); return; }
+      Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+      if (status) status.textContent = "Import OK."; alert("Import OK."); event.target.value = ""; renderAll();
+    } catch { alert("Import kļūda."); }
   };
-  reader.onerror = function() { setStatus("Faila lasīšanas kļūda."); };
   reader.readAsText(file);
 }
 
 function exportCSV() {
-  const rows = [["date", "meal", "food", "kcal", "protein", "carbs", "fat"]];
+  const rows = [["date","meal","food","kcal","protein","carbs","fat"]];
   Object.keys(localStorage).filter(k => k.startsWith("foods_")).sort().forEach(k => {
     const date = k.replace("foods_", "");
-    const foods = JSON.parse(localStorage.getItem(k)) || [];
-    foods.forEach(f => rows.push([date, f.mealType || "", f.name, f.kcal, f.protein, f.carbs, f.fat]));
+    (JSON.parse(localStorage.getItem(k))||[]).forEach(f => rows.push([date, f.mealType||"", f.name, f.kcal, f.protein, f.carbs, f.fat]));
   });
-  const csv = rows.map(r => r.join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "kk-calories.csv"; a.click();
+  const blob = new Blob([rows.map(r=>r.join(",")).join("\n")], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kk-calories.csv"; a.click();
 }
 
-/* ===== GAUGE FIX ===== */
+/* ===== RENDER FUNCTIONS ===== */
+
 function updateGauge(pct) {
   const arc = document.getElementById("gaugeArc");
   if (!arc) return;
-  const total = 251.3;
-  const offset = total - (total * Math.min(pct, 100) / 100);
-  arc.style.strokeDashoffset = offset;
-  arc.style.stroke = pct >= 100 ? "#e8533a" : "#e8533a";
+  arc.style.strokeDashoffset = 251.3 - (251.3 * Math.min(pct, 100) / 100);
 }
 
 function renderOverview() {
   const foods = getFoods();
   const s = getSettings();
-  const totals = foods.reduce((a, f) => {
-    a.kcal += num(f.kcal); a.protein += num(f.protein);
-    a.carbs += num(f.carbs); a.fat += num(f.fat); return a;
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  const totals = foods.reduce((a, f) => { a.kcal+=num(f.kcal); a.protein+=num(f.protein); a.carbs+=num(f.carbs); a.fat+=num(f.fat); return a; }, {kcal:0,protein:0,carbs:0,fat:0});
 
+  updateDayLabel();
   document.getElementById("datePicker").value = currentDate;
   document.getElementById("dateLabel").textContent = currentDate;
   document.getElementById("totalKcal").textContent = Math.round(totals.kcal);
@@ -413,12 +331,8 @@ function renderOverview() {
   document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
   document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
-
-  const pct = Math.round((totals.kcal / s.kcal) * 100);
-  updateGauge(pct);
-
+  updateGauge(Math.round((totals.kcal / s.kcal) * 100));
   renderMealSummary();
-  renderAnalytics();
 }
 
 function renderMealSummary() {
@@ -430,60 +344,64 @@ function renderMealSummary() {
   Object.keys(names).forEach(meal => {
     const items = foods.filter(f => f.mealType === meal);
     if (!items.length) return;
-    const kcal = items.reduce((a, f) => a + num(f.kcal), 0);
-    const protein = items.reduce((a, f) => a + num(f.protein), 0);
-    const carbs = items.reduce((a, f) => a + num(f.carbs), 0);
-    const fat = items.reduce((a, f) => a + num(f.fat), 0);
-    const div = document.createElement("div");
-    div.className = "meal-row";
+    const kcal = items.reduce((a,f) => a+num(f.kcal), 0);
+    const protein = items.reduce((a,f) => a+num(f.protein), 0);
+    const carbs = items.reduce((a,f) => a+num(f.carbs), 0);
+    const fat = items.reduce((a,f) => a+num(f.fat), 0);
+    const div = document.createElement("div"); div.className = "meal-row";
     const info = document.createElement("div");
-    const title = document.createElement("b");
-    title.textContent = names[meal];
-    const small = document.createElement("small");
-    small.textContent = `P ${protein.toFixed(1)} · O ${carbs.toFixed(1)} · T ${fat.toFixed(1)} g`;
+    const title = document.createElement("b"); title.textContent = names[meal];
+    const small = document.createElement("small"); small.textContent = `P ${protein.toFixed(1)} · O ${carbs.toFixed(1)} · T ${fat.toFixed(1)} g`;
     info.append(title, small);
-    const kcalSpan = document.createElement("span");
-    kcalSpan.className = "meal-kcal";
-    kcalSpan.textContent = Math.round(kcal) + " kcal";
-    div.append(info, kcalSpan);
-    box.appendChild(div);
+    const kcalSpan = document.createElement("span"); kcalSpan.className = "meal-kcal"; kcalSpan.textContent = Math.round(kcal) + " kcal";
+    div.append(info, kcalSpan); box.appendChild(div);
   });
-  if (!box.children.length) {
-    const p = document.createElement("p");
-    p.className = "muted-text"; p.textContent = "Nav uztura ierakstu.";
-    box.appendChild(p);
-  }
+  if (!box.children.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav uztura ierakstu."; box.appendChild(p); }
 }
 
 function renderAnalytics() {
   const s = getSettings();
   let total7 = 0;
   for (let i = 0; i < 7; i++) {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - i);
-    total7 += getFoods(d.toISOString().slice(0, 10)).reduce((a, f) => a + num(f.kcal), 0);
+    const d = new Date(currentDate); d.setDate(d.getDate() - i);
+    total7 += getFoods(d.toISOString().slice(0,10)).reduce((a,f) => a+num(f.kcal), 0);
   }
   const avg = Math.round(total7 / 7);
-  const todayProtein = getFoods().reduce((a, f) => a + num(f.protein), 0);
-  document.getElementById("avgKcal7").textContent = avg;
-  document.getElementById("proteinCompliance").textContent = Math.round((todayProtein / s.protein) * 100) + "%";
-  document.getElementById("deficitCalc").textContent = Math.round(s.kcal - avg);
-  const weights = (JSON.parse(localStorage.getItem("weights")) || [])
-    .filter(w => w && w.date && num(w.weight)).sort((a, b) => a.date.localeCompare(b.date));
+  const todayProtein = getFoods().reduce((a,f) => a+num(f.protein), 0);
+  const el7 = document.getElementById("avgKcal7"); if (el7) el7.textContent = avg;
+  const elP = document.getElementById("proteinCompliance"); if (elP) elP.textContent = Math.round((todayProtein/s.protein)*100) + "%";
+  const elD = document.getElementById("deficitCalc"); if (elD) elD.textContent = Math.round(s.kcal - avg);
+
+  const weights = (JSON.parse(localStorage.getItem("weights"))||[]).filter(w=>w&&w.date&&num(w.weight)).sort((a,b)=>a.date.localeCompare(b.date));
   const trendEl = document.getElementById("weightTrend");
-  if (!trendEl) return;
-  if (!weights.length) { trendEl.textContent = "—"; return; }
-  if (weights.length === 1) { trendEl.textContent = num(weights[0].weight).toFixed(1) + " kg"; return; }
-  if (weights.length < 6) {
-    const diff = +(num(weights[weights.length-1].weight) - num(weights[0].weight)).toFixed(1);
-    trendEl.textContent = (diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→") + " " + Math.abs(diff).toFixed(1) + " kg";
-    return;
+  if (trendEl) {
+    if (!weights.length) { trendEl.textContent = "—"; }
+    else if (weights.length === 1) { trendEl.textContent = num(weights[0].weight).toFixed(1) + " kg"; }
+    else if (weights.length < 6) {
+      const diff = +(num(weights[weights.length-1].weight) - num(weights[0].weight)).toFixed(1);
+      trendEl.textContent = (diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→") + " " + Math.abs(diff).toFixed(1) + " kg";
+    } else {
+      const aL = weights.slice(-3).reduce((a,w)=>a+num(w.weight),0)/3;
+      const aP = weights.slice(-6,-3).reduce((a,w)=>a+num(w.weight),0)/3;
+      const diff = +(aL-aP).toFixed(1);
+      trendEl.textContent = (diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→") + " " + Math.abs(diff).toFixed(1) + " kg";
+    }
   }
-  const last3 = weights.slice(-3), prev3 = weights.slice(-6, -3);
-  const aL = last3.reduce((a,w) => a+num(w.weight),0)/3;
-  const aP = prev3.reduce((a,w) => a+num(w.weight),0)/3;
-  const diff = +(aL - aP).toFixed(1);
-  trendEl.textContent = (diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→") + " " + Math.abs(diff).toFixed(1) + " kg";
+
+  // Weekly list
+  const weekBox = document.getElementById("weeklyList");
+  if (weekBox) {
+    clear(weekBox);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(currentDate); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0,10);
+      const kcal = getFoods(key).reduce((a,f) => a+num(f.kcal), 0);
+      const row = document.createElement("div"); row.className = "weekly-row";
+      const label = document.createElement("span"); label.textContent = i === 0 ? "Šodien" : DAY_NAMES[d.getDay()] + " " + key.slice(5);
+      const val = document.createElement("b"); val.textContent = Math.round(kcal) + " kcal";
+      row.append(label, val); weekBox.appendChild(row);
+    }
+  }
 }
 
 function renderFoodList() {
@@ -491,17 +409,15 @@ function renderFoodList() {
   if (!box) return;
   const foods = getFoods();
   clear(box);
-  if (!foods.length) {
-    const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav ierakstu."; box.appendChild(p); return;
-  }
+  if (!foods.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav ierakstu."; box.appendChild(p); return; }
   foods.forEach(f => {
     const div = document.createElement("div"); div.className = "food-item";
+    const info = document.createElement("div");
     const title = document.createElement("strong"); title.textContent = f.name;
-    const small = document.createElement("small");
-    small.textContent = `${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}`;
-    const btn = document.createElement("button"); btn.textContent = "Dzēst";
-    btn.addEventListener("click", () => deleteFood(f.id));
-    div.append(title, small, btn); box.appendChild(div);
+    const small = document.createElement("small"); small.textContent = `${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}`;
+    info.append(title, small);
+    const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteFood(f.id));
+    div.append(info, btn); box.appendChild(div);
   });
 }
 
@@ -512,44 +428,21 @@ function renderProducts() {
   const box = document.getElementById("productList");
   if (box) {
     clear(box);
-    if (!filtered.length) {
-      const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav produktu."; box.appendChild(p);
-    } else {
-      filtered.forEach(p => {
-        const div = document.createElement("div"); div.className = "food-item";
-        const title = document.createElement("strong"); title.textContent = p.name;
-        const small = document.createElement("small");
-        small.textContent = `${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}`;
-        const btn = document.createElement("button"); btn.textContent = "Dzēst";
-        btn.addEventListener("click", () => deleteProduct(p.id));
-        div.append(title, small, btn); box.appendChild(div);
-      });
-    }
+    if (!filtered.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav produktu."; box.appendChild(p); }
+    else filtered.forEach(p => {
+      const div = document.createElement("div"); div.className = "food-item";
+      const info = document.createElement("div");
+      const title = document.createElement("strong"); title.textContent = p.name;
+      const small = document.createElement("small"); small.textContent = `${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}`;
+      info.append(title, small);
+      const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteProduct(p.id));
+      div.append(info, btn); box.appendChild(div);
+    });
   }
   const portion = document.getElementById("portionFood");
   if (portion) { clear(portion); products.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; portion.appendChild(o); }); }
   const rProduct = document.getElementById("rProduct");
   if (rProduct) { clear(rProduct); products.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; rProduct.appendChild(o); }); }
-  renderQuickFoodPicker();
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodList");
-  if (!box) return;
-  const q = String(document.getElementById("foodSearch")?.value || "").toLowerCase().trim();
-  let products = getProducts();
-  if (q) products = products.filter(p => String(p.name||"").toLowerCase().includes(q));
-  products = products.slice(0, 12);
-  clear(box);
-  if (!products.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav atrastu produktu."; box.appendChild(p); return; }
-  products.forEach(p => {
-    const div = document.createElement("div"); div.className = "quick-item"; div.style.cursor = "pointer";
-    const title = document.createElement("strong"); title.textContent = p.name;
-    const small = document.createElement("small"); small.textContent = `${num(p.kcal)} kcal / 100g`;
-    div.append(title, small);
-    div.addEventListener("click", () => quickAddProduct(p.id));
-    box.appendChild(div);
-  });
 }
 
 function renderRecipes() {
@@ -564,11 +457,30 @@ function renderRecipes() {
   recipes.forEach(r => {
     const totals = calculateRecipeTotals(r);
     const div = document.createElement("div"); div.className = "food-item";
+    const info = document.createElement("div");
     const title = document.createElement("strong"); title.textContent = r.name;
     const small = document.createElement("small"); small.textContent = `${totals.kcal} kcal · ${r.yieldGrams}g`;
-    const btn = document.createElement("button"); btn.textContent = "Dzēst";
-    btn.addEventListener("click", () => deleteRecipe(r.id));
-    div.append(title, small, btn); box.appendChild(div);
+    info.append(title, small);
+    const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteRecipe(r.id));
+    div.append(info, btn); box.appendChild(div);
+  });
+}
+
+function renderWeight() {
+  const weights = JSON.parse(localStorage.getItem("weights")) || [];
+  const last = weights[weights.length - 1];
+  const lw = document.getElementById("lastWeight");
+  if (lw) lw.textContent = last ? `Pēdējais: ${last.weight} kg (${last.date})` : "Nav ierakstu.";
+  const box = document.getElementById("weightHistory");
+  if (!box) return;
+  clear(box);
+  if (!weights.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav svara ierakstu."; box.appendChild(p); return; }
+  [...weights].reverse().slice(0, 20).forEach(w => {
+    const row = document.createElement("div"); row.className = "weight-row";
+    const d = new Date(w.date + "T12:00:00");
+    const label = document.createElement("span"); label.textContent = DAY_NAMES[d.getDay()] + " " + w.date;
+    const val = document.createElement("b"); val.textContent = w.weight + " kg";
+    row.append(label, val); box.appendChild(row);
   });
 }
 
@@ -579,10 +491,58 @@ function renderSettings() {
   document.getElementById("setCarbs").value = s.carbs;
   document.getElementById("setFat").value = s.fat;
   document.getElementById("setWater").value = s.water;
-  const weights = JSON.parse(localStorage.getItem("weights")) || [];
-  const last = weights[weights.length - 1];
-  document.getElementById("lastWeight").textContent = last
-    ? `Pēdējais svars: ${last.weight} kg (${last.date})` : "Nav svara ierakstu.";
+}
+
+function renderTemplates() {
+  const box = document.getElementById("templateList");
+  if (!box) return;
+  const templates = getTemplates();
+  box.innerHTML = "";
+  if (!templates.length) { box.innerHTML = '<p class="muted-text">Nav šablonu.</p>'; return; }
+  templates.forEach(t => {
+    const div = document.createElement("div"); div.className = "quick-item";
+    const title = document.createElement("strong"); title.textContent = t.name;
+    const addBtn = document.createElement("button"); addBtn.textContent = "Pievienot"; addBtn.onclick = () => {
+      t.items.forEach(item => addEntry({ name:item.name, kcal:item.kcal, protein:item.protein, carbs:item.carbs, fat:item.fat, mealType:item.mealType }));
+    };
+    const delBtn = document.createElement("button"); delBtn.textContent = "Dzēst"; delBtn.onclick = () => {
+      if (!confirm("Dzēst?")) return;
+      saveTemplates(getTemplates().filter(x => x.id != t.id)); renderTemplates();
+    };
+    div.append(title, addBtn, delBtn); box.appendChild(div);
+  });
+}
+
+function createTemplate() {
+  const name = document.getElementById("tmplName").value.trim();
+  if (!name) return alert("Ievadi nosaukumu.");
+  const foods = getFoods();
+  if (!foods.length) return alert("Nav ēdienu.");
+  const templates = getTemplates();
+  templates.push({ id: Date.now(), name, items: foods });
+  saveTemplates(templates);
+  document.getElementById("tmplName").value = "";
+  renderTemplates();
+}
+
+async function lookupBarcode() {
+  const code = document.getElementById("barcodeInput").value.trim();
+  const status = document.getElementById("barcodeStatus");
+  if (!code) { status.textContent = "Ievadi EAN kodu."; return; }
+  status.textContent = "Meklē...";
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+    const data = await res.json();
+    if (!data.product) { status.textContent = "Nav atrasts."; return; }
+    const nutr = data.product.nutriments || {};
+    const kcal = nutr["energy-kcal_100g"] || nutr["energy-kcal"] || (nutr["energy_100g"] ? nutr["energy_100g"]/4.184 : 0) || 0;
+    document.getElementById("pName").value = data.product.product_name || data.product.product_name_en || "";
+    document.getElementById("pKcal").value = Math.round(Number(kcal)||0);
+    document.getElementById("pProtein").value = Number(nutr["proteins_100g"]||0).toFixed(1);
+    document.getElementById("pCarbs").value = Number(nutr["carbohydrates_100g"]||0).toFixed(1);
+    document.getElementById("pFat").value = Number(nutr["fat_100g"]||0).toFixed(1);
+    status.textContent = "Atrasts. Pārbaudi un saglabā.";
+  } catch { status.textContent = "Kļūda."; }
 }
 
 function renderAll() {
@@ -598,71 +558,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=9.4");
+  navigator.serviceWorker.register("service-worker.js?v=9.5");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
-
-/* ===== MEAL TEMPLATES ===== */
-function getTemplates() { return JSON.parse(localStorage.getItem("kk_meal_templates")) || []; }
-function saveTemplates(t) { localStorage.setItem("kk_meal_templates", JSON.stringify(t)); }
-
-function createTemplate() {
-  const name = document.getElementById("tmplName").value.trim();
-  if (!name) return alert("Ievadi nosaukumu.");
-  const foods = getFoods();
-  if (!foods.length) return alert("Nav ēdienu, ko saglabāt.");
-  const templates = getTemplates();
-  templates.push({ id: Date.now(), name, items: foods });
-  saveTemplates(templates);
-  document.getElementById("tmplName").value = "";
-  renderTemplates();
-}
-
-function applyTemplate(id) {
-  const t = getTemplates().find(x => x.id == id);
-  if (!t) return;
-  t.items.forEach(item => addEntry({ name: item.name, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat, mealType: item.mealType }));
-}
-
-function deleteTemplate(id) {
-  if (!confirm("Dzēst šablonu?")) return;
-  saveTemplates(getTemplates().filter(t => t.id != id));
-  renderTemplates();
-}
-
-function renderTemplates() {
-  const box = document.getElementById("templateList");
-  if (!box) return;
-  const templates = getTemplates();
-  box.innerHTML = "";
-  if (!templates.length) { box.innerHTML = '<p class="muted-text">Nav šablonu.</p>'; return; }
-  templates.forEach(t => {
-    const div = document.createElement("div"); div.className = "quick-item";
-    const title = document.createElement("strong"); title.textContent = t.name;
-    const addBtn = document.createElement("button"); addBtn.textContent = "Pievienot"; addBtn.onclick = () => applyTemplate(t.id);
-    const delBtn = document.createElement("button"); delBtn.textContent = "Dzēst"; delBtn.onclick = () => deleteTemplate(t.id);
-    div.append(title, addBtn, delBtn); box.appendChild(div);
-  });
-}
-
-/* ===== BARCODE EAN LOOKUP ===== */
-async function lookupBarcode() {
-  const code = document.getElementById("barcodeInput").value.trim();
-  const status = document.getElementById("barcodeStatus");
-  if (!code) { status.textContent = "Ievadi EAN kodu."; return; }
-  status.textContent = "Meklē...";
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
-    const data = await res.json();
-    if (!data.product) { status.textContent = "Produkts nav atrasts."; return; }
-    const nutr = data.product.nutriments || {};
-    const kcal = nutr["energy-kcal_100g"] || nutr["energy-kcal"] || (nutr["energy_100g"] ? nutr["energy_100g"]/4.184 : 0) || 0;
-    document.getElementById("pName").value = data.product.product_name || data.product.product_name_en || "";
-    document.getElementById("pKcal").value = Math.round(Number(kcal)||0);
-    document.getElementById("pProtein").value = Number(nutr["proteins_100g"]||0).toFixed(1);
-    document.getElementById("pCarbs").value = Number(nutr["carbohydrates_100g"]||0).toFixed(1);
-    document.getElementById("pFat").value = Number(nutr["fat_100g"]||0).toFixed(1);
-    status.textContent = "Atrasts. Pārbaudi un saglabā.";
-  } catch (err) { status.textContent = "Kļūda meklēšanā."; }
-}
