@@ -948,55 +948,61 @@ async function lookupBarcode() {
   const code = document.getElementById("barcodeInput").value.trim();
   const status = document.getElementById("barcodeStatus");
 
-  function setStatus(msg) {
-    if (status) status.textContent = msg;
-  }
-
   if (!code) {
-    setStatus("Ievadi EAN kodu.");
+    status.textContent = "Ievadi EAN kodu.";
     return;
   }
 
-  setStatus("Meklē...");
+  status.textContent = "Meklē OpenFoodFacts...";
 
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
     const data = await res.json();
 
-    if (data.status !== 1) {
-      setStatus("Produkts nav atrasts.");
+    if (!data.product) {
+      status.textContent = "Produkts nav atrasts.";
       return;
     }
 
-    const p = data.product;
+    const product = data.product;
+    const nutr = product.nutriments || {};
 
-    const name = p.product_name || "Nezināms produkts";
-    const nutr = p.nutriments || {};
+    const kcal =
+      nutr["energy-kcal_100g"] ||
+      nutr["energy-kcal"] ||
+      (nutr["energy_100g"] ? nutr["energy_100g"] / 4.184 : 0) ||
+      0;
 
-    const kcal = nutr["energy-kcal_100g"] || 0;
-    const protein = nutr.proteins_100g || 0;
-    const carbs = nutr.carbohydrates_100g || 0;
-    const fat = nutr.fat_100g || 0;
+    const protein =
+      nutr["proteins_100g"] ||
+      nutr["protein_100g"] ||
+      nutr["proteins"] ||
+      0;
 
-    const products = getProducts();
+    const carbs =
+      nutr["carbohydrates_100g"] ||
+      nutr["carbohydrates"] ||
+      0;
 
-    products.push({
-      id: Date.now(),
-      name,
-      kcal,
-      protein,
-      carbs,
-      fat,
-      favorite: false
-    });
+    const fat =
+      nutr["fat_100g"] ||
+      nutr["fat"] ||
+      0;
 
-    saveProducts(products);
-    renderProducts();
+    document.getElementById("pName").value =
+      product.product_name ||
+      product.product_name_lv ||
+      product.product_name_en ||
+      "";
 
-    setStatus("Pievienots: " + name);
+    document.getElementById("pKcal").value = Math.round(Number(kcal) || 0);
+    document.getElementById("pProtein").value = Number(protein || 0).toFixed(1);
+    document.getElementById("pCarbs").value = Number(carbs || 0).toFixed(1);
+    document.getElementById("pFat").value = Number(fat || 0).toFixed(1);
 
-  } catch (e) {
-    setStatus("API kļūda.");
+    status.textContent = "Produkts atrasts. Pārbaudi datus un saglabā.";
+  } catch (err) {
+    status.textContent = "Kļūda barcode meklēšanā.";
   }
 }
 

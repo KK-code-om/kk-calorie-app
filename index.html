@@ -79,21 +79,6 @@ kcal/dienā</small></div>
     <section id="nutrition" class="screen">
 
       <section class="card">
-        <h2>Ātrā ievade</h2>
-        <input id="foodSearch" placeholder="Meklēt produktu..." 
-oninput="renderQuickFoodPicker()" />
-        <input id="quickGrams" type="number" placeholder="Grami" 
-value="100" />
-        <select id="quickMeal">
-          <option value="breakfast">Brokastis</option>
-          <option value="lunch">Pusdienas</option>
-          <option value="dinner">Vakariņas</option>
-          <option value="snack">Uzkoda</option>
-        </select>
-        <div id="quickFoodList"></div>
-      </section>
-
-      <section class="card">
         <h2>Produkts gramos</h2>
         <select id="portionFood"></select>
         <input id="portionGrams" type="number" placeholder="Grami" />
@@ -110,10 +95,8 @@ value="100" />
         <h2>Manuāli</h2>
         <input id="foodName" placeholder="Ēdiens" />
         <input id="kcal" type="number" placeholder="kcal" />
-        <input id="protein" type="number" step="0.1" placeholder="Proteīns 
-g" />
-        <input id="carbs" type="number" step="0.1" placeholder="Ogļhidrāti 
-g" />
+        <input id="protein" type="number" step="0.1" placeholder="Proteīns g" />
+        <input id="carbs" type="number" step="0.1" placeholder="Ogļhidrāti g" />
         <input id="fat" type="number" step="0.1" placeholder="Tauki g" />
         <button onclick="addManualFood()">Pievienot manuāli</button>
       </section>
@@ -127,8 +110,7 @@ g" />
       <section class="card">
         <h2>Šabloni</h2>
         <input id="tmplName" placeholder="Šablona nosaukums" />
-        <button onclick="createTemplate()">Saglabāt šodienu kā 
-šablonu</button>
+        <button onclick="createTemplate()">Saglabāt šodienu kā šablonu</button>
         <div id="templateList"></div>
       </section>
 
