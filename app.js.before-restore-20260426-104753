@@ -1,0 +1,692 @@
+const DEFAULT_SETTINGS = {
+  kcal: 1900,
+  protein: 130,
+  carbs: 190,
+  fat: 70,
+  water: 2000
+};
+
+let currentDate = new Date().toISOString().slice(0, 10);
+let currentIngredients = [];
+
+function clear(el) {
+  if (el) el.textContent = "";
+}
+
+function getSettings() {
+  return JSON.parse(localStorage.getItem("kk_settings")) || DEFAULT_SETTINGS;
+}
+
+function saveSettingsData(s) {
+  localStorage.setItem("kk_settings", JSON.stringify(s));
+}
+
+function getFoods(date = currentDate) {
+  return JSON.parse(localStorage.getItem("foods_" + date)) || [];
+}
+
+function saveFoods(foods, date = currentDate) {
+  localStorage.setItem("foods_" + date, JSON.stringify(foods));
+}
+
+function getRecipes() {
+  return JSON.parse(localStorage.getItem("kk_recipes")) || [];
+}
+
+function saveRecipes(recipes) {
+  localStorage.setItem("kk_recipes", JSON.stringify(recipes));
+}
+
+function refreshFoodViews() {
+  renderOverview();
+  renderFoodList();
+  renderQuickFoodPicker();
+}
+
+function refreshProductViews() {
+  renderProducts();
+  renderQuickFoodPicker();
+  renderRecipes();
+}
+
+function showTab(tab) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active-screen"));
+  document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.remove("active"));
+
+  document.getElementById(tab).classList.add("active-screen");
+  document.getElementById("tab-" + tab).classList.add("active");
+
+  if (tab === "overview") renderOverview();
+  if (tab === "nutrition") {
+    renderFoodList();
+    renderProducts();
+    renderQuickFoodPicker();
+  }
+  if (tab === "products") renderProducts();
+  if (tab === "recipes") renderRecipes();
+  if (tab === "settings") renderSettings();
+}
+
+function changeDay(offset) {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + offset);
+  currentDate = d.toISOString().slice(0, 10);
+  renderOverview();
+  renderFoodList();
+}
+
+function setDateFromPicker() {
+  currentDate = document.getElementById("datePicker").value;
+  renderOverview();
+  renderFoodList();
+}
+
+function addEntry(entry) {
+  const foods = getFoods();
+  foods.push({ id: Date.now() + Math.random(), ...entry });
+  saveFoods(foods);
+  refreshFoodViews();
+}
+
+function addManualFood() {
+  addEntry({
+    name: document.getElementById("foodName").value || "Bez nosaukuma",
+    kcal: num(document.getElementById("kcal").value),
+    protein: num(document.getElementById("protein").value),
+    carbs: num(document.getElementById("carbs").value),
+    fat: num(document.getElementById("fat").value),
+    mealType: "snack"
+  });
+
+  ["foodName", "kcal", "protein", "carbs", "fat"].forEach(id => document.getElementById(id).value = "");
+}
+
+function quickAddProduct(productId) {
+  addProductByGrams(
+    productId,
+    document.getElementById("quickGrams").value,
+    document.getElementById("quickMeal").value
+  );
+}
+
+function addPortionFood() {
+  addProductByGrams(
+    document.getElementById("portionFood").value,
+    document.getElementById("portionGrams").value,
+    document.getElementById("portionMeal").value
+  );
+
+  document.getElementById("portionGrams").value = "";
+}
+
+function resetDay() {
+  if (!confirm("Dzēst izvēlēto dienu?")) return;
+  localStorage.removeItem("foods_" + currentDate);
+  refreshFoodViews();
+}
+
+function saveProduct() {
+  const name = document.getElementById("pName").value.trim();
+  if (!name) return alert("Ievadi nosaukumu.");
+
+  const products = getProducts();
+
+  products.push({
+    id: Date.now(),
+    name,
+    kcal: num(document.getElementById("pKcal").value),
+    protein: num(document.getElementById("pProtein").value),
+    carbs: num(document.getElementById("pCarbs").value),
+    fat: num(document.getElementById("pFat").value),
+    favorite: false
+  });
+
+  saveProducts(products);
+  ["pName", "pKcal", "pProtein", "pCarbs", "pFat"].forEach(id => document.getElementById(id).value = "");
+  refreshProductViews();
+}
+
+function touchRecentFood(productId) {
+  const p = getProducts().find(x => String(x.id) === String(productId));
+  if (!p) return;
+
+  let recent = JSON.parse(localStorage.getItem("kk_recent_foods")) || [];
+  recent = recent.filter(x => String(x.id) !== String(productId));
+  recent.unshift({ id: p.id, name: p.name });
+  localStorage.setItem("kk_recent_foods", JSON.stringify(recent.slice(0, 12)));
+}
+
+function importProductsCSV() {
+  const box = document.getElementById("csvImportBox");
+  const status = document.getElementById("csvImportStatus");
+
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
+  }
+
+  const raw = box.value.trim();
+  if (!raw) return alert("CSV lauks ir tukšs.");
+
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if (lines.length < 2) return alert("CSV vajag header + produktus.");
+
+  const header = lines[0].split(",").map(x => x.trim().toLowerCase());
+
+  const idx = {
+    name: header.indexOf("name"),
+    kcal: header.indexOf("kcal"),
+    protein: header.indexOf("protein"),
+    carbs: header.indexOf("carbs"),
+    fat: header.indexOf("fat")
+  };
+
+  if (idx.name < 0 || idx.kcal < 0 || idx.protein < 0 || idx.carbs < 0 || idx.fat < 0) {
+    return alert("Header jābūt: name,kcal,protein,carbs,fat");
+  }
+
+  const products = getProducts();
+  let added = 0, updated = 0, skipped = 0;
+
+  lines.slice(1).forEach(line => {
+    const c = line.split(",").map(x => x.trim());
+    const name = c[idx.name];
+
+    if (!name) {
+      skipped++;
+      return;
+    }
+
+    const item = {
+      name,
+      kcal: num(c[idx.kcal]),
+      protein: num(c[idx.protein]),
+      carbs: num(c[idx.carbs]),
+      fat: num(c[idx.fat])
+    };
+
+    const found = products.findIndex(p => String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim());
+
+    if (found >= 0) {
+      products[found] = { ...products[found], ...item, favorite: Boolean(products[found].favorite) };
+      updated++;
+    } else {
+      products.push({ id: Date.now() + Math.random(), ...item, favorite: false });
+      added++;
+    }
+  });
+
+  saveProducts(products);
+  box.value = "";
+
+  const msg = `CSV import OK. Pievienoti: ${added}, Atjaunoti: ${updated}, Izlaisti: ${skipped}`;
+  setStatus(msg);
+  alert(msg);
+  refreshProductViews();
+}
+
+function addIngredient() {
+  const id = document.getElementById("rProduct").value;
+  const grams = num(document.getElementById("rGrams").value);
+  const p = getProducts().find(x => String(x.id) === String(id));
+
+  if (!p || !grams) return alert("Izvēlies produktu un gramus.");
+
+  currentIngredients.push({ productId: p.id, name: p.name, grams });
+  document.getElementById("rGrams").value = "";
+  renderIngredients();
+}
+
+function removeIngredient(index) {
+  currentIngredients.splice(index, 1);
+  renderIngredients();
+}
+
+function calculateRecipeTotals(recipe) {
+  const products = getProducts();
+  const totals = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+
+  recipe.ingredients.forEach(ing => {
+    const p = products.find(x => String(x.id) === String(ing.productId));
+    if (!p) return;
+
+    const f = ing.grams / 100;
+    totals.kcal += num(p.kcal) * f;
+    totals.protein += num(p.protein) * f;
+    totals.carbs += num(p.carbs) * f;
+    totals.fat += num(p.fat) * f;
+  });
+
+  return {
+    kcal: Math.round(totals.kcal),
+    protein: +totals.protein.toFixed(1),
+    carbs: +totals.carbs.toFixed(1),
+    fat: +totals.fat.toFixed(1)
+  };
+}
+
+function saveRecipe() {
+  const name = document.getElementById("rName").value.trim();
+  const yieldGrams = num(document.getElementById("rYield").value);
+
+  if (!name || !yieldGrams || currentIngredients.length === 0) {
+    return alert("Vajag nosaukumu, gatavo svaru un sastāvdaļas.");
+  }
+
+  const recipes = getRecipes();
+  recipes.push({ id: Date.now(), name, yieldGrams, ingredients: currentIngredients });
+  saveRecipes(recipes);
+
+  currentIngredients = [];
+  document.getElementById("rName").value = "";
+  document.getElementById("rYield").value = "";
+  renderRecipes();
+}
+
+function deleteRecipe(id) {
+  if (!confirm("Dzēst recepti?")) return;
+  saveRecipes(getRecipes().filter(r => String(r.id) !== String(id)));
+  renderRecipes();
+}
+
+function addRecipePortion() {
+  const id = document.getElementById("recipeSelectToday").value;
+  const grams = num(document.getElementById("recipeConsumedGrams").value);
+  const meal = document.getElementById("recipeMealToday")?.value || "dinner";
+  const r = getRecipes().find(x => String(x.id) === String(id));
+
+  if (!r || !grams) return alert("Izvēlies recepti un gramus.");
+
+  const totals = calculateRecipeTotals(r);
+  const f = grams / r.yieldGrams;
+
+  addEntry({
+    name: `${r.name} ${grams}g`,
+    kcal: Math.round(totals.kcal * f),
+    protein: +(totals.protein * f).toFixed(1),
+    carbs: +(totals.carbs * f).toFixed(1),
+    fat: +(totals.fat * f).toFixed(1),
+    mealType: meal
+  });
+
+  document.getElementById("recipeConsumedGrams").value = "";
+}
+
+function saveWeight() {
+  const weight = num(document.getElementById("weightInput").value);
+  if (!weight) return;
+
+  let weights = JSON.parse(localStorage.getItem("weights")) || [];
+  weights = weights.filter(w => w.date !== currentDate);
+  weights.push({ date: currentDate, weight });
+  weights.sort((a, b) => a.date.localeCompare(b.date));
+  localStorage.setItem("weights", JSON.stringify(weights));
+
+  document.getElementById("weightInput").value = "";
+  renderSettings();
+  renderAnalytics();
+}
+
+function saveSettings() {
+  const s = {
+    kcal: num(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal,
+    protein: num(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein,
+    carbs: num(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs,
+    fat: num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat,
+    water: num(document.getElementById("setWater").value) || DEFAULT_SETTINGS.water
+  };
+
+  saveSettingsData(s);
+  alert("Settings saglabāti.");
+  renderSettings();
+  renderOverview();
+}
+
+function exportCSV() {
+  const rows = [["date", "meal", "food", "kcal", "protein", "carbs", "fat"]];
+
+  Object.keys(localStorage)
+    .filter(k => k.startsWith("foods_"))
+    .sort()
+    .forEach(k => {
+      const date = k.replace("foods_", "");
+      const foods = JSON.parse(localStorage.getItem(k)) || [];
+      foods.forEach(f => rows.push([date, f.mealType || "", f.name, f.kcal, f.protein, f.carbs, f.fat]));
+    });
+
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kk-calories.csv";
+  a.click();
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js?v=7.2-stable");
+}
+
+render();
+
+
+/* ===== V7.3 MEAL TEMPLATES ===== */
+
+function getTemplates() {
+  return JSON.parse(localStorage.getItem("kk_meal_templates")) || [];
+}
+
+function saveTemplates(t) {
+  localStorage.setItem("kk_meal_templates", JSON.stringify(t));
+}
+
+function createTemplate() {
+  const name = document.getElementById("tmplName").value.trim();
+  if (!name) return alert("Ievadi nosaukumu.");
+
+  const foods = getFoods();
+  if (!foods.length) return alert("Nav ēdienu, ko saglabāt.");
+
+  const templates = getTemplates();
+
+  templates.push({
+    id: Date.now(),
+    name,
+    items: foods
+  });
+
+  saveTemplates(templates);
+  document.getElementById("tmplName").value = "";
+  renderTemplates();
+}
+
+function applyTemplate(id) {
+  const t = getTemplates().find(x => x.id == id);
+  if (!t) return;
+
+  t.items.forEach(item => {
+    addEntry({
+      name: item.name,
+      kcal: item.kcal,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      mealType: item.mealType
+    });
+  });
+}
+
+function deleteTemplate(id) {
+  if (!confirm("Dzēst šablonu?")) return;
+  saveTemplates(getTemplates().filter(t => t.id != id));
+  renderTemplates();
+}
+
+/* ===== END V7.3 ===== */
+
+
+/* ===== V8 BARCODE LOOKUP ===== */
+
+async
+
+/* ===== END V8 ===== */
+
+
+/* ===== V9 BARCODE CAMERA SCAN ===== */
+
+let barcodeStream = null;
+let barcodeScanTimer = null;
+
+async
+
+/* ===== END V9 ===== */
+
+/* === KK STABLE PATCH 2026-04-26 B === */
+
+function kkReadJSON(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+  catch { return fallback; }
+}
+function kkWriteJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+function num(v) { const n = Number(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
+function round1(v) { return Math.round(num(v) * 10) / 10; }
+
+function todayKey() {
+  const d = new Date();
+  return `foods_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function getProducts() { return kkReadJSON("kk_products", []); }
+function saveProducts(x) { kkWriteJSON("kk_products", x); }
+function getTodayFoods() { return kkReadJSON(todayKey(), []); }
+function saveTodayFoods(x) { kkWriteJSON(todayKey(), x); }
+
+function addProduct() {
+  const p = {
+    id: Date.now(),
+    name: document.getElementById("productName")?.value?.trim() || "",
+    kcal: num(document.getElementById("productKcal")?.value),
+    protein: num(document.getElementById("productProtein")?.value),
+    carbs: num(document.getElementById("productCarbs")?.value),
+    fat: num(document.getElementById("productFat")?.value),
+    barcode: document.getElementById("productBarcode")?.value?.trim() || ""
+  };
+  if (!p.name) return alert("Ievadi produkta nosaukumu.");
+  getProducts().push(p);
+  saveProducts([...getProducts().filter(x => x.id !== p.id), p]);
+  ["productName","productKcal","productProtein","productCarbs","productFat","productBarcode"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
+  render();
+}
+
+function deleteProduct(id) {
+  saveProducts(getProducts().filter(p => String(p.id) !== String(id)));
+  render();
+}
+
+function renderProducts() {
+  const products = getProducts();
+  const select = document.getElementById("foodProductSelect");
+  const list = document.getElementById("productsList");
+
+  if (select) {
+    select.innerHTML = products.length
+      ? products.map(p => `<option value="${p.id}">${p.name}</option>`).join("")
+      : `<option value="">Nav produktu</option>`;
+  }
+
+  if (list) {
+    list.innerHTML = products.length ? products.map(p => `
+      <div class="row">
+        <div>
+          <strong>${p.name}</strong>
+          <div class="muted">${round1(p.kcal)} kcal · P ${round1(p.protein)} · O ${round1(p.carbs)} · T ${round1(p.fat)} / 100 g${p.barcode ? " · " + p.barcode : ""}</div>
+        </div>
+        <button onclick="deleteProduct('${p.id}')">Dzēst</button>
+      </div>
+    `).join("") : `<p class="muted">Produktu vēl nav.</p>`;
+  }
+}
+
+function addFoodFromProduct() {
+  const id = document.getElementById("foodProductSelect")?.value;
+  const grams = num(document.getElementById("foodGramsInput")?.value);
+  const meal = document.getElementById("mealSelect")?.value || "Ēdiens";
+  const p = getProducts().find(x => String(x.id) === String(id));
+
+  if (!p) return alert("Izvēlies produktu.");
+  if (grams <= 0) return alert("Ievadi gramus.");
+
+  const k = grams / 100;
+  const food = {
+    id: Date.now(),
+    productId: p.id,
+    name: p.name,
+    meal,
+    grams,
+    kcal: round1(p.kcal * k),
+    protein: round1(p.protein * k),
+    carbs: round1(p.carbs * k),
+    fat: round1(p.fat * k)
+  };
+
+  const foods = getTodayFoods();
+  foods.push(food);
+  saveTodayFoods(foods);
+
+  const gi = document.getElementById("foodGramsInput");
+  if (gi) gi.value = "";
+  render();
+}
+
+function deleteFood(id) {
+  saveTodayFoods(getTodayFoods().filter(f => String(f.id) !== String(id)));
+  render();
+}
+
+function renderFoods() {
+  const list = document.getElementById("foodList");
+  if (!list) return;
+
+  const foods = getTodayFoods();
+  list.innerHTML = foods.length ? foods.map(f => `
+    <div class="row">
+      <div>
+        <strong>${f.name}</strong>
+        <div class="muted">${f.meal} · ${round1(f.grams)} g · ${round1(f.kcal)} kcal · P ${round1(f.protein)} · O ${round1(f.carbs)} · T ${round1(f.fat)}</div>
+      </div>
+      <button onclick="deleteFood('${f.id}')">Dzēst</button>
+    </div>
+  `).join("") : `<p class="muted">Šodien vēl nav ievades.</p>`;
+}
+
+function totalsToday() {
+  return getTodayFoods().reduce((a, f) => {
+    a.kcal += num(f.kcal); a.protein += num(f.protein); a.carbs += num(f.carbs); a.fat += num(f.fat);
+    return a;
+  }, {kcal:0, protein:0, carbs:0, fat:0});
+}
+
+function renderMealSummary() {
+  const el = document.getElementById("mealSummary");
+  if (!el) return;
+  const t = totalsToday();
+  el.innerHTML = `
+    <div class="grid cards">
+      <div class="stat-card"><div class="muted">kcal</div><strong>${round1(t.kcal)}</strong></div>
+      <div class="stat-card"><div class="muted">Proteīns</div><strong>${round1(t.protein)} g</strong></div>
+      <div class="stat-card"><div class="muted">Ogļhidrāti</div><strong>${round1(t.carbs)} g</strong></div>
+      <div class="stat-card"><div class="muted">Tauki</div><strong>${round1(t.fat)} g</strong></div>
+    </div>`;
+}
+
+function calcWeightTrend() {
+  const weights = kkReadJSON("weights", []).map(w => ({...w, weight:num(w.weight)})).filter(w => w.weight > 0);
+  if (weights.length === 0) return "—";
+  if (weights.length === 1) return `${round1(weights[0].weight)} kg`;
+
+  const first = weights[0].weight;
+  const last = weights[weights.length - 1].weight;
+
+  if (weights.length <= 5) {
+    const diff = round1(last - first);
+    const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+    return `${round1(first)} → ${round1(last)} kg ${arrow} ${Math.abs(diff)} kg`;
+  }
+
+  const avg = arr => arr.reduce((s, x) => s + x.weight, 0) / arr.length;
+  const prev = avg(weights.slice(-6, -3));
+  const lastAvg = avg(weights.slice(-3));
+  const diff = round1(lastAvg - prev);
+  const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+  return `${round1(prev)} → ${round1(lastAvg)} kg ${arrow} ${Math.abs(diff)} kg`;
+}
+
+function renderAnalytics() {
+  const t = totalsToday();
+  const kcalEl = document.getElementById("todayKcal");
+  const proteinEl = document.getElementById("todayProtein");
+  const trendEl = document.getElementById("weightTrend");
+  if (kcalEl) kcalEl.textContent = `${round1(t.kcal)} kcal`;
+  if (proteinEl) proteinEl.textContent = `${round1(t.protein)} g`;
+  if (trendEl) trendEl.textContent = calcWeightTrend();
+}
+
+function exportData() {
+  const data = {};
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith("foods_") || key.startsWith("kk_") || key === "weights") data[key] = localStorage.getItem(key);
+  });
+  const d = new Date();
+  const filename = `kk-calories-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function importData(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      Object.entries(data).forEach(([key, value]) => {
+        if (key.startsWith("foods_") || key.startsWith("kk_") || key === "weights") localStorage.setItem(key, value);
+      });
+      render();
+      alert("Imports pabeigts.");
+    } catch {
+      alert("JSON imports neizdevās.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importProductsCsv(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
+    const products = getProducts();
+    lines.slice(1).forEach(line => {
+      const [name,kcal,protein,carbs,fat,barcode] = line.split(",").map(x => String(x || "").trim());
+      if (name) products.push({id:Date.now()+Math.random(), name, kcal:num(kcal), protein:num(protein), carbs:num(carbs), fat:num(fat), barcode:barcode || ""});
+    });
+    saveProducts(products);
+    render();
+  };
+  reader.readAsText(file);
+}
+
+function lookupBarcode() {
+  const code = document.getElementById("barcodeInput")?.value?.trim();
+  const status = document.getElementById("barcodeStatus");
+  const found = getProducts().find(p => p.barcode && p.barcode === code);
+  if (status) status.textContent = !code ? "Ievadi EAN kodu." : found ? `Atrasts: ${found.name}` : "Nav atrasts lokālajā produktu DB.";
+}
+
+function startBarcodeCamera() {
+  const status = document.getElementById("barcodeCameraStatus");
+  if (status) status.textContent = "Barcode kameras UI atjaunots. Automātiska skenēšana nav aktivizēta šajā stabilajā patch.";
+}
+function stopBarcodeCamera() {
+  const video = document.getElementById("barcodeVideo");
+  if (video?.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+  if (video) { video.srcObject = null; video.style.display = "none"; }
+  const status = document.getElementById("barcodeCameraStatus");
+  if (status) status.textContent = "Kamera apturēta.";
+}
+
+function render() {
+  renderProducts();
+  renderFoods();
+  renderMealSummary();
+  renderAnalytics();
+}
+
+document.addEventListener("DOMContentLoaded", render);
