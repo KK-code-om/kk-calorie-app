@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9.5" />
-  <link rel="manifest" href="manifest.json?v=9.5" />
+  <link rel="stylesheet" href="style.css?v=9.6" />
+  <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="KK Calories" />
@@ -17,9 +17,8 @@
 <body>
   <main class="app">
 
-    <!-- ===== OVERVIEW ===== -->
+    <!-- OVERVIEW -->
     <section id="overview" class="screen active-screen">
-
       <header class="top-bar">
         <div>
           <p class="top-label" id="dayName">Pirmdiena</p>
@@ -27,25 +26,16 @@
         </div>
         <button class="add-btn" onclick="showTab('nutrition')">+</button>
       </header>
-
       <div class="date-nav">
         <button class="nav-arrow" onclick="changeDay(-1)">‹</button>
         <input id="datePicker" type="date" onchange="setDateFromPicker()" class="date-input" />
         <button class="nav-arrow" onclick="changeDay(1)">›</button>
       </div>
-
       <div class="gauge-card">
         <div class="gauge-wrap">
           <svg viewBox="0 0 200 116" class="gauge-svg" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 20 110 A 80 80 0 0 1 180 110"
-              fill="none" stroke="rgba(255,255,255,0.12)"
-              stroke-width="14" stroke-linecap="round"/>
-            <path id="gaugeArc"
-              d="M 20 110 A 80 80 0 0 1 180 110"
-              fill="none" stroke="#e8533a"
-              stroke-width="14" stroke-linecap="round"
-              stroke-dasharray="251.3" stroke-dashoffset="251.3"
-              style="transition: stroke-dashoffset 0.6s ease"/>
+            <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14" stroke-linecap="round"/>
+            <path id="gaugeArc" d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#e8533a" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3" style="transition: stroke-dashoffset 0.6s ease"/>
           </svg>
           <div class="gauge-center">
             <span class="gauge-num" id="totalKcal">0</span>
@@ -54,87 +44,48 @@
         </div>
         <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
       </div>
-
       <div class="macro-grid">
-        <div class="macro-tile tile-fire">
-          <span class="tile-icon">🔥</span>
-          <b id="kcalMini">0</b>
-          <small>kcal</small>
-        </div>
-        <div class="macro-tile tile-muscle">
-          <span class="tile-icon">💪</span>
-          <b id="proteinMini">0 g</b>
-          <small>proteīns</small>
-        </div>
-        <div class="macro-tile tile-grain">
-          <span class="tile-icon">🌾</span>
-          <b id="carbsMini">0 g</b>
-          <small>ogļhidr.</small>
-        </div>
-        <div class="macro-tile tile-drop">
-          <span class="tile-icon">💧</span>
-          <b id="fatMini">0 g</b>
-          <small>tauki</small>
-        </div>
+        <div class="macro-tile tile-fire"><span class="tile-icon">🔥</span><b id="kcalMini">0</b><small>kcal</small></div>
+        <div class="macro-tile tile-muscle"><span class="tile-icon">💪</span><b id="proteinMini">0 g</b><small>proteīns</small></div>
+        <div class="macro-tile tile-grain"><span class="tile-icon">🌾</span><b id="carbsMini">0 g</b><small>ogļhidr.</small></div>
+        <div class="macro-tile tile-drop"><span class="tile-icon">💧</span><b id="fatMini">0 g</b><small>tauki</small></div>
       </div>
-
       <div class="section-card">
         <h2>Uzturs šodien</h2>
         <div id="mealSummary"></div>
       </div>
-
-      <!-- 6 dashboard cards -->
       <div class="dash-grid">
         <div class="dash-card" style="background:#1a1a1a" onclick="showTab('nutrition')">
-          <span class="dash-icon">🍽</span>
-          <div class="dash-label">Uzturs</div>
-          <div class="dash-sub">Pievienot ēdienu</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">🍽</span><div class="dash-label">Uzturs</div><div class="dash-sub">Pievienot ēdienu</div><span class="dash-arrow">›</span>
         </div>
         <div class="dash-card" style="background:#2d4a3e" onclick="showTab('products')">
-          <span class="dash-icon">🥦</span>
-          <div class="dash-label">Produkti</div>
-          <div class="dash-sub">DB un imports</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">🥦</span><div class="dash-label">Produkti</div><div class="dash-sub">DB un imports</div><span class="dash-arrow">›</span>
         </div>
         <div class="dash-card" style="background:#4a2d1a" onclick="showTab('recipes')">
-          <span class="dash-icon">👨‍🍳</span>
-          <div class="dash-label">Receptes</div>
-          <div class="dash-sub">Gatavot un pievienot</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">👨‍🍳</span><div class="dash-label">Receptes</div><div class="dash-sub">Gatavot un pievienot</div><span class="dash-arrow">›</span>
         </div>
         <div class="dash-card" style="background:#2d1a4a" onclick="showTab('analytics')">
-          <span class="dash-icon">📈</span>
-          <div class="dash-label">Analītika</div>
-          <div class="dash-sub">7 dienu pārskats</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">📈</span><div class="dash-label">Analītika</div><div class="dash-sub">7 dienu pārskats</div><span class="dash-arrow">›</span>
         </div>
         <div class="dash-card" style="background:#1a3a4a" onclick="showTab('weight')">
-          <span class="dash-icon">⚖️</span>
-          <div class="dash-label">Svars</div>
-          <div class="dash-sub">Ievadīt un trends</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">⚖️</span><div class="dash-label">Svars</div><div class="dash-sub">Ievadīt un trends</div><span class="dash-arrow">›</span>
         </div>
         <div class="dash-card" style="background:#1a2d4a" onclick="showTab('settings')">
-          <span class="dash-icon">⚙️</span>
-          <div class="dash-label">Iestatījumi</div>
-          <div class="dash-sub">Mērķi un eksports</div>
-          <span class="dash-arrow">›</span>
+          <span class="dash-icon">⚙️</span><div class="dash-label">Iestatījumi</div><div class="dash-sub">Mērķi un eksports</div><span class="dash-arrow">›</span>
         </div>
       </div>
-
     </section>
 
-    <!-- ===== NUTRITION ===== -->
+    <!-- NUTRITION -->
     <section id="nutrition" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Ievade</p><h1>Uzturs</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="section-card">
         <h2>Pievienot produktu</h2>
-        <select id="portionFood" class="field"></select>
+        <input id="portionFoodSearch" list="portionFoodList" placeholder="Raksti produkta nosaukumu..." class="field" autocomplete="off" />
+        <datalist id="portionFoodList"></datalist>
         <input id="portionGrams" type="number" placeholder="Grami" class="field" />
         <select id="portionMeal" class="field">
           <option value="breakfast">🍳 Brokastis</option>
@@ -144,7 +95,6 @@
         </select>
         <button class="btn-primary full-width" onclick="addPortionFood()">Pievienot</button>
       </div>
-
       <div class="section-card">
         <h2>Manuāla ievade</h2>
         <input id="foodName" placeholder="Ēdiena nosaukums" class="field" />
@@ -158,13 +108,11 @@
         </div>
         <button class="btn-secondary full-width" onclick="addManualFood()">Pievienot manuāli</button>
       </div>
-
       <div class="section-card">
         <h2>Šodienas ieraksti</h2>
         <div id="foodList"></div>
         <button class="btn-danger full-width" style="margin-top:8px" onclick="resetDay()">Dzēst dienu</button>
       </div>
-
       <div class="section-card">
         <h2>Šabloni</h2>
         <input id="tmplName" placeholder="Šablona nosaukums" class="field" />
@@ -173,13 +121,12 @@
       </div>
     </section>
 
-    <!-- ===== PRODUCTS ===== -->
+    <!-- PRODUCTS -->
     <section id="products" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Datubāze</p><h1>Produkti</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="section-card">
         <h2>Pievienot produktu</h2>
         <input id="pName" placeholder="Nosaukums" class="field" />
@@ -193,7 +140,6 @@
         </div>
         <button class="btn-primary full-width" onclick="saveProduct()">Saglabāt produktu</button>
       </div>
-
       <div class="section-card">
         <h2>EAN barcode</h2>
         <div class="field-row">
@@ -202,7 +148,6 @@
         </div>
         <p id="barcodeStatus" class="muted-text"></p>
       </div>
-
       <div class="section-card">
         <h2>CSV imports</h2>
         <p class="muted-text small-text">Kolonnas: name,kcal,protein,carbs,fat</p>
@@ -210,7 +155,6 @@
         <button class="btn-secondary full-width" onclick="importProductsCSV()">Importēt CSV</button>
         <div id="csvImportStatus" class="status-msg"></div>
       </div>
-
       <div class="section-card">
         <h2>Produktu DB</h2>
         <input id="productSearch" placeholder="Meklēt produktu..." class="field" oninput="renderProducts()" />
@@ -218,13 +162,12 @@
       </div>
     </section>
 
-    <!-- ===== RECIPES ===== -->
+    <!-- RECIPES -->
     <section id="recipes" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Gatavošana</p><h1>Receptes</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="section-card">
         <h2>Pievienot recepti dienai</h2>
         <select id="recipeSelectToday" class="field"></select>
@@ -237,65 +180,47 @@
         </select>
         <button class="btn-primary full-width" onclick="addRecipePortion()">Pievienot porciju</button>
       </div>
-
       <div class="section-card">
         <h2>Jauna recepte</h2>
         <input id="rName" placeholder="Receptes nosaukums" class="field" />
         <input id="rYield" type="number" placeholder="Gatavais svars gramos" class="field" />
-        <div class="field-row">
-          <select id="rProduct" class="field"></select>
-          <input id="rGrams" type="number" placeholder="Grami" class="field" />
-        </div>
+        <input id="rProductSearch" list="rProductList" placeholder="Sastāvdaļa..." class="field" autocomplete="off" />
+        <datalist id="rProductList"></datalist>
+        <input id="rGrams" type="number" placeholder="Grami" class="field" />
         <button class="btn-secondary full-width" onclick="addIngredient()">+ Sastāvdaļa</button>
         <div id="ingredientList" style="margin-top:8px"></div>
         <button class="btn-primary full-width" onclick="saveRecipe()">Saglabāt recepti</button>
       </div>
-
       <div class="section-card">
         <h2>Manas receptes</h2>
         <div id="recipeList"></div>
       </div>
     </section>
 
-    <!-- ===== ANALYTICS ===== -->
+    <!-- ANALYTICS -->
     <section id="analytics" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Statistika</p><h1>Analītika</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="analytics-grid-full">
-        <div class="analytics-tile-big">
-          <b id="avgKcal7">0</b>
-          <small>7 dienu vidējais kcal</small>
-        </div>
-        <div class="analytics-tile-big">
-          <b id="proteinCompliance">0%</b>
-          <small>Proteīna mērķis</small>
-        </div>
-        <div class="analytics-tile-big">
-          <b id="deficitCalc">0</b>
-          <small>Deficīts kcal/dienā</small>
-        </div>
-        <div class="analytics-tile-big">
-          <b id="weightTrend">—</b>
-          <small>Svara trends</small>
-        </div>
+        <div class="analytics-tile-big"><b id="avgKcal7">0</b><small>7 dienu vidējais kcal</small></div>
+        <div class="analytics-tile-big"><b id="proteinCompliance">0%</b><small>Proteīna mērķis</small></div>
+        <div class="analytics-tile-big"><b id="deficitCalc">0</b><small>Deficīts kcal/dienā</small></div>
+        <div class="analytics-tile-big"><b id="weightTrend">—</b><small>Svara trends</small></div>
       </div>
-
       <div class="section-card" style="margin-top:14px">
         <h2>Pēdējās 7 dienas</h2>
         <div id="weeklyList"></div>
       </div>
     </section>
 
-    <!-- ===== WEIGHT ===== -->
+    <!-- WEIGHT -->
     <section id="weight" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Izsekošana</p><h1>Svars</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="section-card">
         <h2>Ievadīt svaru</h2>
         <div class="field-row">
@@ -304,20 +229,18 @@
         </div>
         <p id="lastWeight" class="muted-text"></p>
       </div>
-
       <div class="section-card">
         <h2>Vēsture</h2>
         <div id="weightHistory"></div>
       </div>
     </section>
 
-    <!-- ===== SETTINGS ===== -->
+    <!-- SETTINGS -->
     <section id="settings" class="screen">
       <header class="top-bar">
         <div><p class="top-label">Konfigurācija</p><h1>Iestatījumi</h1></div>
         <button class="back-btn" onclick="showTab('overview')">←</button>
       </header>
-
       <div class="section-card">
         <h2>Mērķi</h2>
         <div class="field-row">
@@ -331,7 +254,6 @@
         <input id="setWater" type="number" placeholder="Ūdens ml" class="field" />
         <button class="btn-primary full-width" onclick="saveSettings()">Saglabāt mērķus</button>
       </div>
-
       <div class="section-card">
         <h2>Datu eksports</h2>
         <div class="field-row">
@@ -345,6 +267,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=9.5"></script>
+  <script src="app.js?v=9.6"></script>
 </body>
 </html>
