@@ -111,6 +111,54 @@ function deleteFood(id) {
   renderOverview(); renderFoodList();
 }
 
+function editFood(id) {
+  const foods = getFoods();
+  const f = foods.find(x => String(x.id) === String(id));
+  if (!f) return;
+
+  // Extract grams from name if product-based (e.g. "Banāns 125g")
+  const match = f.name.match(/^(.+?)\s+(\d+(?:\.\d+)?)g$/);
+  const currentGrams = match ? parseFloat(match[2]) : null;
+  const baseName = match ? match[1] : null;
+
+  if (!match) {
+    // Manual entry — edit kcal directly
+    const newKcal = prompt("Jauna kcal vērtība:", f.kcal);
+    if (newKcal === null) return;
+    f.kcal = num(newKcal);
+    saveFoods(foods);
+    renderOverview(); renderFoodList();
+    return;
+  }
+
+  const newGrams = prompt(`Jauns svars gramOS (bija ${currentGrams}g):`, currentGrams);
+  if (newGrams === null) return;
+  const g = num(newGrams);
+  if (!g || g <= 0) return alert("Nederīgs svars.");
+
+  // Find product in DB by base name
+  const p = getProducts().find(x => x.name.toLowerCase() === baseName.toLowerCase());
+  if (p) {
+    const factor = g / 100;
+    f.name = `${p.name} ${g}g`;
+    f.kcal = Math.round(num(p.kcal) * factor);
+    f.protein = +(num(p.protein) * factor).toFixed(1);
+    f.carbs = +(num(p.carbs) * factor).toFixed(1);
+    f.fat = +(num(p.fat) * factor).toFixed(1);
+  } else {
+    // Scale proportionally from current
+    const scale = g / currentGrams;
+    f.name = `${baseName} ${g}g`;
+    f.kcal = Math.round(num(f.kcal) * scale);
+    f.protein = +(num(f.protein) * scale).toFixed(1);
+    f.carbs = +(num(f.carbs) * scale).toFixed(1);
+    f.fat = +(num(f.fat) * scale).toFixed(1);
+  }
+
+  saveFoods(foods);
+  renderOverview(); renderFoodList();
+}
+
 function resetDay() {
   if (!confirm("Dzēst izvēlēto dienu?")) return;
   localStorage.removeItem("foods_" + currentDate);
@@ -474,12 +522,18 @@ function renderFoodList() {
   if (!foods.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav ierakstu."; box.appendChild(p); return; }
   foods.forEach(f => {
     const div = document.createElement("div"); div.className = "food-item";
-    const info = document.createElement("div");
+    const info = document.createElement("div"); info.style.flex = "1";
     const title = document.createElement("strong"); title.textContent = f.name;
     const small = document.createElement("small"); small.textContent = `${Math.round(num(f.kcal))} kcal · P ${num(f.protein)} · O ${num(f.carbs)} · T ${num(f.fat)}`;
     info.append(title, small);
-    const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteFood(f.id));
-    div.append(info, btn); box.appendChild(div);
+    const btnWrap = document.createElement("div"); btnWrap.style.cssText = "display:flex;gap:6px;flex-shrink:0;";
+    const editBtn = document.createElement("button"); editBtn.textContent = "✏️";
+    editBtn.style.cssText = "background:#f0ede8;color:#1a1a1a;padding:7px 10px;font-size:14px;border-radius:10px;";
+    editBtn.addEventListener("click", () => editFood(f.id));
+    const delBtn = document.createElement("button"); delBtn.textContent = "Dzēst";
+    delBtn.addEventListener("click", () => deleteFood(f.id));
+    btnWrap.append(editBtn, delBtn);
+    div.append(info, btnWrap); box.appendChild(div);
   });
 }
 
@@ -722,7 +776,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=9.8");
+  navigator.serviceWorker.register("service-worker.js?v=9.9");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
