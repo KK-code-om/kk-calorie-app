@@ -47,6 +47,7 @@ function showTab(tab) {
   if (tab === "nutrition") { renderFoodList(); renderProductDatalist(); }
   if (tab === "products") renderProducts();
   if (tab === "recipes") { renderRecipes(); renderProductDatalist(); }
+  if (tab === "recipe-detail") { renderProductDatalist(); }
   if (tab === "analytics") renderAnalytics();
   if (tab === "weight") renderWeight();
   if (tab === "settings") renderSettings();
@@ -514,13 +515,18 @@ function renderRecipes() {
   if (!recipes.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav recepšu."; box.appendChild(p); return; }
   recipes.forEach(r => {
     const totals = calculateRecipeTotals(r);
-    const div = document.createElement("div"); div.className = "food-item";
-    const info = document.createElement("div");
+    const div = document.createElement("div"); div.className = "food-item"; div.style.cursor = "pointer";
+    const info = document.createElement("div"); info.style.flex = "1";
     const title = document.createElement("strong"); title.textContent = r.name;
-    const small = document.createElement("small"); small.textContent = `${totals.kcal} kcal · ${r.yieldGrams}g`;
+    const small = document.createElement("small"); small.textContent = `${totals.kcal} kcal · ${r.yieldGrams}g · ${r.ingredients.length} sast.`;
     info.append(title, small);
-    const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteRecipe(r.id));
-    div.append(info, btn); box.appendChild(div);
+    info.addEventListener("click", () => openRecipeDetail(r.id));
+    const btnWrap = document.createElement("div"); btnWrap.style.display = "flex"; btnWrap.style.gap = "6px";
+    const editBtn = document.createElement("button"); editBtn.textContent = "✏️"; editBtn.style.cssText = "background:#f0ede8;color:#1a1a1a;padding:7px 10px;font-size:14px;border-radius:10px;";
+    editBtn.addEventListener("click", (e) => { e.stopPropagation(); openRecipeDetail(r.id); });
+    const delBtn = document.createElement("button"); delBtn.textContent = "Dzēst"; delBtn.addEventListener("click", (e) => { e.stopPropagation(); deleteRecipe(r.id); });
+    btnWrap.append(editBtn, delBtn);
+    div.append(info, btnWrap); box.appendChild(div);
   });
 }
 
@@ -603,6 +609,105 @@ async function lookupBarcode() {
   } catch { status.textContent = "Kļūda."; }
 }
 
+
+/* ===== RECIPE DETAIL & EDIT ===== */
+let rdRecipeId = null;
+let rdIngredients = [];
+
+function openRecipeDetail(id) {
+  const r = getRecipes().find(x => String(x.id) === String(id));
+  if (!r) return;
+  rdRecipeId = id;
+  rdIngredients = r.ingredients.map(i => ({ ...i }));
+
+  document.getElementById("rdTitle").textContent = r.name;
+  document.getElementById("rdName").value = r.name;
+  document.getElementById("rdYield").value = r.yieldGrams;
+
+  renderRdSummary(r);
+  renderRdIngredients();
+  renderRdIngredientEdit();
+  showTab("recipe-detail");
+}
+
+function renderRdSummary(r) {
+  const box = document.getElementById("rdSummary");
+  if (!box) return;
+  const totals = calculateRecipeTotals(r);
+  box.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><b style="font-size:22px">${totals.kcal}</b><br><small style="color:#aaa">kcal kopā</small></div>
+      <div><b style="font-size:22px">${r.yieldGrams}g</b><br><small style="color:#aaa">gatavais svars</small></div>
+      <div><b style="font-size:18px">P ${totals.protein}g</b><br><small style="color:#aaa">proteīns</small></div>
+      <div><b style="font-size:18px">O ${totals.carbs}g · T ${totals.fat}g</b><br><small style="color:#aaa">ogļhidr. · tauki</small></div>
+    </div>`;
+}
+
+function renderRdIngredients() {
+  const box = document.getElementById("rdIngredients");
+  if (!box) return;
+  box.innerHTML = "";
+  const products = getProducts();
+  rdIngredients.forEach(ing => {
+    const p = products.find(x => String(x.id) === String(ing.productId));
+    const kcal = p ? Math.round(num(p.kcal) * ing.grams / 100) : 0;
+    const row = document.createElement("div"); row.className = "meal-row";
+    const info = document.createElement("div");
+    const title = document.createElement("b"); title.textContent = ing.name;
+    const small = document.createElement("small"); small.textContent = `${ing.grams}g · ${kcal} kcal`;
+    info.append(title, small);
+    row.append(info);
+    box.appendChild(row);
+  });
+  if (!rdIngredients.length) box.innerHTML = '<p class="muted-text">Nav sastāvdaļu.</p>';
+}
+
+function renderRdIngredientEdit() {
+  const box = document.getElementById("rdIngredientEdit");
+  if (!box) return;
+  box.innerHTML = "";
+  rdIngredients.forEach((ing, index) => {
+    const div = document.createElement("div"); div.className = "quick-item";
+    const name = document.createElement("strong"); name.textContent = ing.name;
+    const gramsInput = document.createElement("input");
+    gramsInput.type = "number"; gramsInput.value = ing.grams;
+    gramsInput.style.cssText = "width:70px;background:#f8f7f4;border:none;border-radius:8px;padding:6px 8px;font-size:14px;";
+    gramsInput.addEventListener("change", () => { rdIngredients[index].grams = num(gramsInput.value); renderRdIngredients(); });
+    const btn = document.createElement("button"); btn.textContent = "Dzēst";
+    btn.style.cssText = "background:#ffe5e0;color:#e8533a;padding:7px 10px;font-size:12px;border-radius:10px;";
+    btn.addEventListener("click", () => { rdIngredients.splice(index, 1); renderRdIngredients(); renderRdIngredientEdit(); });
+    div.append(name, gramsInput, btn);
+    box.appendChild(div);
+  });
+}
+
+function rdAddIngredient() {
+  const searchVal = (document.getElementById("rdProductSearch")?.value || "").trim();
+  const grams = num(document.getElementById("rdGrams").value);
+  const p = getProducts().find(x => x.name.toLowerCase() === searchVal.toLowerCase());
+  if (!p || !grams) return alert("Izvēlies produktu un ievadi gramus.");
+  rdIngredients.push({ productId: p.id, name: p.name, grams });
+  document.getElementById("rdProductSearch").value = "";
+  document.getElementById("rdGrams").value = "";
+  renderRdIngredients();
+  renderRdIngredientEdit();
+}
+
+function rdSaveRecipe() {
+  const name = document.getElementById("rdName").value.trim();
+  const yieldGrams = num(document.getElementById("rdYield").value);
+  if (!name || !yieldGrams) return alert("Vajag nosaukumu un gatavo svaru.");
+  if (!rdIngredients.length) return alert("Vajag vismaz vienu sastāvdaļu.");
+  const recipes = getRecipes();
+  const idx = recipes.findIndex(r => String(r.id) === String(rdRecipeId));
+  if (idx < 0) return alert("Recepte nav atrasta.");
+  recipes[idx] = { ...recipes[idx], name, yieldGrams, ingredients: rdIngredients };
+  saveRecipes(recipes);
+  alert("Recepte saglabāta.");
+  showTab("recipes");
+}
+/* ===== END RECIPE DETAIL ===== */
+
 function renderAll() {
   ensureStarterProducts();
   renderOverview();
@@ -617,7 +722,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=9.7");
+  navigator.serviceWorker.register("service-worker.js?v=9.8");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);

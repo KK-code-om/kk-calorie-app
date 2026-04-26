@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9.7" />
+  <link rel="stylesheet" href="style.css?v=9.8" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,10 +20,7 @@
     <!-- OVERVIEW -->
     <section id="overview" class="screen active-screen">
       <header class="top-bar">
-        <div>
-          <p class="top-label" id="dayName">Pirmdiena</p>
-          <h1 id="dateLabel">—</h1>
-        </div>
+        <div><p class="top-label" id="dayName">Pirmdiena</p><h1 id="dateLabel">—</h1></div>
         <button class="add-btn" onclick="showTab('nutrition')">+</button>
       </header>
       <div class="date-nav">
@@ -55,24 +52,12 @@
         <div id="mealSummary"></div>
       </div>
       <div class="dash-grid">
-        <div class="dash-card" style="background:#1a1a1a" onclick="showTab('nutrition')">
-          <span class="dash-icon">🍽</span><div class="dash-label">Uzturs</div><div class="dash-sub">Pievienot ēdienu</div><span class="dash-arrow">›</span>
-        </div>
-        <div class="dash-card" style="background:#2d4a3e" onclick="showTab('products')">
-          <span class="dash-icon">🥦</span><div class="dash-label">Produkti</div><div class="dash-sub">DB un imports</div><span class="dash-arrow">›</span>
-        </div>
-        <div class="dash-card" style="background:#4a2d1a" onclick="showTab('recipes')">
-          <span class="dash-icon">👨‍🍳</span><div class="dash-label">Receptes</div><div class="dash-sub">Gatavot un pievienot</div><span class="dash-arrow">›</span>
-        </div>
-        <div class="dash-card" style="background:#2d1a4a" onclick="showTab('analytics')">
-          <span class="dash-icon">📈</span><div class="dash-label">Analītika</div><div class="dash-sub">7 dienu pārskats</div><span class="dash-arrow">›</span>
-        </div>
-        <div class="dash-card" style="background:#1a3a4a" onclick="showTab('weight')">
-          <span class="dash-icon">⚖️</span><div class="dash-label">Svars</div><div class="dash-sub">Ievadīt un trends</div><span class="dash-arrow">›</span>
-        </div>
-        <div class="dash-card" style="background:#1a2d4a" onclick="showTab('settings')">
-          <span class="dash-icon">⚙️</span><div class="dash-label">Iestatījumi</div><div class="dash-sub">Mērķi un eksports</div><span class="dash-arrow">›</span>
-        </div>
+        <div class="dash-card" style="background:#1a1a1a" onclick="showTab('nutrition')"><span class="dash-icon">🍽</span><div class="dash-label">Uzturs</div><div class="dash-sub">Pievienot ēdienu</div><span class="dash-arrow">›</span></div>
+        <div class="dash-card" style="background:#2d4a3e" onclick="showTab('products')"><span class="dash-icon">🥦</span><div class="dash-label">Produkti</div><div class="dash-sub">DB un imports</div><span class="dash-arrow">›</span></div>
+        <div class="dash-card" style="background:#4a2d1a" onclick="showTab('recipes')"><span class="dash-icon">👨‍🍳</span><div class="dash-label">Receptes</div><div class="dash-sub">Gatavot un pievienot</div><span class="dash-arrow">›</span></div>
+        <div class="dash-card" style="background:#2d1a4a" onclick="showTab('analytics')"><span class="dash-icon">📈</span><div class="dash-label">Analītika</div><div class="dash-sub">7 dienu pārskats</div><span class="dash-arrow">›</span></div>
+        <div class="dash-card" style="background:#1a3a4a" onclick="showTab('weight')"><span class="dash-icon">⚖️</span><div class="dash-label">Svars</div><div class="dash-sub">Ievadīt un trends</div><span class="dash-arrow">›</span></div>
+        <div class="dash-card" style="background:#1a2d4a" onclick="showTab('settings')"><span class="dash-icon">⚙️</span><div class="dash-label">Iestatījumi</div><div class="dash-sub">Mērķi un eksports</div><span class="dash-arrow">›</span></div>
       </div>
     </section>
 
@@ -201,6 +186,35 @@
       </div>
     </section>
 
+    <!-- RECIPE DETAIL / EDIT -->
+    <section id="recipe-detail" class="screen">
+      <header class="top-bar">
+        <div><p class="top-label">Recepte</p><h1 id="rdTitle">—</h1></div>
+        <button class="back-btn" onclick="showTab('recipes')">←</button>
+      </header>
+      <!-- Totals summary -->
+      <div class="section-card" id="rdSummary"></div>
+      <!-- Ingredients list -->
+      <div class="section-card">
+        <h2>Sastāvdaļas</h2>
+        <div id="rdIngredients"></div>
+      </div>
+      <!-- Edit form -->
+      <div class="section-card">
+        <h2>Labot recepti</h2>
+        <input id="rdName" placeholder="Nosaukums" class="field" />
+        <input id="rdYield" type="number" placeholder="Gatavais svars gramos" class="field" />
+        <div class="picker-wrap">
+          <input id="rdProductSearch" class="picker-input" placeholder="Pievienot sastāvdaļu..." autocomplete="off" oninput="pickerFilter('rdProductSearch','rdDropdown')" onfocus="pickerOpen('rdDropdown')" />
+          <div id="rdDropdown" class="picker-dropdown"></div>
+        </div>
+        <input id="rdGrams" type="number" placeholder="Grami" class="field" />
+        <button class="btn-secondary full-width" onclick="rdAddIngredient()">+ Pievienot sastāvdaļu</button>
+        <div id="rdIngredientEdit" style="margin-top:8px"></div>
+        <button class="btn-primary full-width" onclick="rdSaveRecipe()">Saglabāt izmaiņas</button>
+      </div>
+    </section>
+
     <!-- ANALYTICS -->
     <section id="analytics" class="screen">
       <header class="top-bar">
@@ -271,6 +285,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=9.7"></script>
+  <script src="app.js?v=9.8"></script>
 </body>
 </html>
