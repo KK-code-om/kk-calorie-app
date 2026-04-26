@@ -570,7 +570,7 @@ function render() {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.2-final");
+  navigator.serviceWorker.register("service-worker.js?v=7.2.3.3");
 }
 
 render();
@@ -1007,103 +1007,3 @@ document.addEventListener("input", e => {
     renderQuickFoodPicker();
   }
 });
-
-
-/* ===== V7.2 FINAL GRAM QUICK ADD ===== */
-
-function kkNumber(v) {
-  return Number(String(v || "0").replace(",", ".").trim()) || 0;
-}
-
-function quickAddProduct(productId, grams, meal) {
-  const products = getProducts();
-  const p = products.find(x => String(x.id) === String(productId));
-
-  if (!p) {
-    alert("Produkts nav atrasts.");
-    return;
-  }
-
-  const gramsInput = document.getElementById("quickGrams");
-  const g = grams ? kkNumber(grams) : kkNumber(gramsInput ? gramsInput.value : 100);
-
-  if (!g || g <= 0) {
-    alert("Ievadi gramus.");
-    return;
-  }
-
-  const mealSelect = document.getElementById("portionMeal");
-  const mealType = meal || (mealSelect ? mealSelect.value : "snack");
-  const f = g / 100;
-
-  addEntry({
-    name: p.name + " " + g + "g",
-    kcal: Math.round(kkNumber(p.kcal) * f),
-    protein: +(kkNumber(p.protein) * f).toFixed(1),
-    carbs: +(kkNumber(p.carbs) * f).toFixed(1),
-    fat: +(kkNumber(p.fat) * f).toFixed(1),
-    mealType: mealType
-  });
-
-  if (typeof touchRecentFood === "function") {
-    touchRecentFood(productId);
-  }
-}
-
-function renderQuickFoodPicker() {
-  const box = document.getElementById("quickFoodList");
-  if (!box) return;
-
-  const searchEl = document.getElementById("foodSearch");
-  const q = String(searchEl ? searchEl.value : "").toLowerCase().trim();
-
-  let products = getProducts();
-
-  if (q) {
-    products = products.filter(p =>
-      String(p.name || "").toLowerCase().includes(q)
-    );
-  }
-
-  products = products.slice(0, 12);
-
-  if (!products.length) {
-    box.innerHTML = '<p class="muted">Nav atrastu produktu.</p>';
-    return;
-  }
-
-  box.innerHTML = "";
-
-  products.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "quick-item";
-    div.style.cursor = "pointer";
-    div.innerHTML =
-      "<strong>" + p.name + "</strong>" +
-      "<small>" + kkNumber(p.kcal) + " kcal / 100g · P " + kkNumber(p.protein) +
-      " · O " + kkNumber(p.carbs) + " · T " + kkNumber(p.fat) + "</small>";
-
-    div.onclick = function() {
-      quickAddProduct(p.id);
-    };
-
-    box.appendChild(div);
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  renderQuickFoodPicker();
-
-  const foodSearch = document.getElementById("foodSearch");
-  if (foodSearch) {
-    foodSearch.addEventListener("input", renderQuickFoodPicker);
-  }
-});
-
-const kkOriginalRenderV72Final = render;
-render = function() {
-  kkOriginalRenderV72Final();
-  renderQuickFoodPicker();
-};
-
-/* ===== END V7.2 FINAL ===== */

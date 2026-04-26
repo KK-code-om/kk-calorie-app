@@ -470,31 +470,3 @@ h2 {
 }
 
 /* ===== END V6 FINAL ===== */
-
-
-/* ===== V7.2 FINAL QUICK ADD UI ===== */
-
-#quickGrams {
-  margin-bottom: 10px;
-}
-
-#quickFoodList .quick-item {
-  background: #f6f8fa;
-  border-radius: 18px;
-  padding: 12px;
-  margin-bottom: 9px;
-}
-
-#quickFoodList .quick-item strong {
-  display: block;
-  font-size: 16px;
-}
-
-#quickFoodList .quick-item small {
-  display: block;
-  color: #69727d;
-  margin-top: 4px;
-  font-size: 12px;
-}
-
-/* ===== END V7.2 FINAL ===== */
