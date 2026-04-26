@@ -232,8 +232,8 @@ placeholder="Svars kg" />
         <h2>Eksports</h2>
         <button onclick="exportData()">Export JSON</button>
         <button onclick="exportCSV()">Export CSV</button>
-        <input id="importJsonFile" type="file" accept=".json" 
-onchange="importDataFromFile(event)" />
+        <input id="importJsonFile" type="file" accept=".json" onchange="importDataFromFile(event)" style="display:none;" />
+        <button onclick="document.getElementById('importJsonFile').click()">Import JSON</button>
         <p id="importStatus" class="muted"></p>
       </section>
 
