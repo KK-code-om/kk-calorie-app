@@ -568,16 +568,21 @@ function renderMealSummary() {
     const fat = items.reduce((a, f) => a + num(f.fat), 0);
 
     const div = document.createElement("div");
-    div.className = "meal-box";
+    div.className = "meal-row";
 
     const wrap = document.createElement("div");
     const title = document.createElement("b");
     title.textContent = names[meal];
 
     const small = document.createElement("small");
-    small.textContent = `${Math.round(kcal)} kcal · P ${protein.toFixed(1)} · O ${carbs.toFixed(1)} · T ${fat.toFixed(1)}`;
+    small.textContent = `P ${protein.toFixed(1)} · O ${carbs.toFixed(1)} · T ${fat.toFixed(1)} g`;
+
+    const kcalSpan = document.createElement("span");
+    kcalSpan.className = "meal-kcal";
+    kcalSpan.textContent = Math.round(kcal) + " kcal";
 
     wrap.append(title, small);
+    div.appendChild(kcalSpan);
     div.appendChild(wrap);
     box.appendChild(div);
   });
