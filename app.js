@@ -931,3 +931,64 @@ function renderTemplates() {
 }
 
 /* ===== END V7.3 ===== */
+
+
+/* ===== V8 BARCODE LOOKUP ===== */
+
+async function lookupBarcode() {
+  const code = document.getElementById("barcodeInput").value.trim();
+  const status = document.getElementById("barcodeStatus");
+
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
+  }
+
+  if (!code) {
+    setStatus("Ievadi EAN kodu.");
+    return;
+  }
+
+  setStatus("Meklē...");
+
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const data = await res.json();
+
+    if (data.status !== 1) {
+      setStatus("Produkts nav atrasts.");
+      return;
+    }
+
+    const p = data.product;
+
+    const name = p.product_name || "Nezināms produkts";
+    const nutr = p.nutriments || {};
+
+    const kcal = nutr["energy-kcal_100g"] || 0;
+    const protein = nutr.proteins_100g || 0;
+    const carbs = nutr.carbohydrates_100g || 0;
+    const fat = nutr.fat_100g || 0;
+
+    const products = getProducts();
+
+    products.push({
+      id: Date.now(),
+      name,
+      kcal,
+      protein,
+      carbs,
+      fat,
+      favorite: false
+    });
+
+    saveProducts(products);
+    renderProducts();
+
+    setStatus("Pievienots: " + name);
+
+  } catch (e) {
+    setStatus("API kļūda.");
+  }
+}
+
+/* ===== END V8 ===== */

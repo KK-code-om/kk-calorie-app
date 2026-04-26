@@ -116,6 +116,13 @@
     
     <section id="products" class="screen">
       <section class="card">
+        <h2>Barcode</h2>
+        <input id="barcodeInput" placeholder="EAN kods..." />
+        <button onclick="lookupBarcode()">Meklēt</button>
+        <p id="barcodeStatus" class="muted"></p>
+      </section>
+
+      <section class="card">
         <h2>Produkts uz 100g</h2>
         <input id="pName" placeholder="Nosaukums" />
         <input id="pKcal" type="number" placeholder="kcal / 100g" />
