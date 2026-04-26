@@ -116,6 +116,14 @@
     
     <section id="products" class="screen">
       <section class="card">
+        <h2>Barcode kamera</h2>
+        <video id="barcodeVideo" playsinline style="width:100%;border-radius:14px;display:none;"></video>
+        <button onclick="startBarcodeCamera()">Skenēt ar kameru</button>
+        <button onclick="stopBarcodeCamera()">Apturēt kameru</button>
+        <p id="barcodeCameraStatus" class="muted"></p>
+      </section>
+
+      <section class="card">
         <h2>Barcode</h2>
         <input id="barcodeInput" placeholder="EAN kods..." />
         <button onclick="lookupBarcode()">Meklēt</button>

@@ -992,3 +992,93 @@ async function lookupBarcode() {
 }
 
 /* ===== END V8 ===== */
+
+
+/* ===== V9 BARCODE CAMERA SCAN ===== */
+
+let barcodeStream = null;
+let barcodeScanTimer = null;
+
+async function startBarcodeCamera() {
+  const video = document.getElementById("barcodeVideo");
+  const status = document.getElementById("barcodeCameraStatus");
+
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
+  }
+
+  if (!("BarcodeDetector" in window)) {
+    setStatus("Šis pārlūks neatbalsta BarcodeDetector. Lieto manuālo EAN ievadi.");
+    return;
+  }
+
+  try {
+    barcodeStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment"
+      }
+    });
+
+    video.srcObject = barcodeStream;
+    video.style.display = "block";
+    await video.play();
+
+    const detector = new BarcodeDetector({
+      formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
+    });
+
+    setStatus("Skenē...");
+
+    barcodeScanTimer = setInterval(async () => {
+      try {
+        const codes = await detector.detect(video);
+
+        if (codes && codes.length > 0) {
+          const code = codes[0].rawValue;
+
+          setStatus("Atrasts: " + code);
+          stopBarcodeCamera();
+
+          const input = document.getElementById("barcodeInput");
+          if (input) input.value = code;
+
+          if (typeof lookupBarcode === "function") {
+            lookupBarcode();
+          }
+        }
+      } catch (e) {
+        setStatus("Skenēšanas kļūda.");
+      }
+    }, 700);
+
+  } catch (e) {
+    setStatus("Kameru nevar palaist. Pārbaudi atļaujas.");
+  }
+}
+
+function stopBarcodeCamera() {
+  const video = document.getElementById("barcodeVideo");
+  const status = document.getElementById("barcodeCameraStatus");
+
+  if (barcodeScanTimer) {
+    clearInterval(barcodeScanTimer);
+    barcodeScanTimer = null;
+  }
+
+  if (barcodeStream) {
+    barcodeStream.getTracks().forEach(track => track.stop());
+    barcodeStream = null;
+  }
+
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.style.display = "none";
+  }
+
+  if (status && status.textContent === "Skenē...") {
+    status.textContent = "Kamera apturēta.";
+  }
+}
+
+/* ===== END V9 ===== */

@@ -1,4 +1,4 @@
-const CACHE_NAME = "kk-calorie-app-v7-2-stable";
+const CACHE_NAME = "kk-calorie-app-v9";
 
 self.addEventListener("install", event => {
   self.skipWaiting();
