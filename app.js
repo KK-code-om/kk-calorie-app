@@ -844,3 +844,90 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+
+
+/* ===== V7.3 MEAL TEMPLATES ===== */
+
+function getTemplates() {
+  return JSON.parse(localStorage.getItem("kk_meal_templates")) || [];
+}
+
+function saveTemplates(t) {
+  localStorage.setItem("kk_meal_templates", JSON.stringify(t));
+}
+
+function createTemplate() {
+  const name = document.getElementById("tmplName").value.trim();
+  if (!name) return alert("Ievadi nosaukumu.");
+
+  const foods = getFoods();
+  if (!foods.length) return alert("Nav ēdienu, ko saglabāt.");
+
+  const templates = getTemplates();
+
+  templates.push({
+    id: Date.now(),
+    name,
+    items: foods
+  });
+
+  saveTemplates(templates);
+  document.getElementById("tmplName").value = "";
+  renderTemplates();
+}
+
+function applyTemplate(id) {
+  const t = getTemplates().find(x => x.id == id);
+  if (!t) return;
+
+  t.items.forEach(item => {
+    addEntry({
+      name: item.name,
+      kcal: item.kcal,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      mealType: item.mealType
+    });
+  });
+}
+
+function deleteTemplate(id) {
+  if (!confirm("Dzēst šablonu?")) return;
+  saveTemplates(getTemplates().filter(t => t.id != id));
+  renderTemplates();
+}
+
+function renderTemplates() {
+  const box = document.getElementById("templateList");
+  if (!box) return;
+
+  const templates = getTemplates();
+  box.innerHTML = "";
+
+  if (!templates.length) {
+    box.innerHTML = '<p class="muted">Nav šablonu.</p>';
+    return;
+  }
+
+  templates.forEach(t => {
+    const div = document.createElement("div");
+    div.className = "quick-item";
+
+    const title = document.createElement("strong");
+    title.textContent = t.name;
+
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "Pievienot";
+    addBtn.onclick = () => applyTemplate(t.id);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "Dzēst";
+    delBtn.onclick = () => deleteTemplate(t.id);
+
+    div.append(title, addBtn, delBtn);
+    box.appendChild(div);
+  });
+}
+
+/* ===== END V7.3 ===== */
