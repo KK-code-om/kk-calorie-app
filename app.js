@@ -523,6 +523,7 @@ function renderMealSummary() {
   });
 }
 
+
 function renderAnalytics() {
   const s = getSettings();
   let total7 = 0;
@@ -545,8 +546,25 @@ function renderAnalytics() {
     .filter(w => w && w.date && num(w.weight))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  const trendEl = document.getElementById("weightTrend");
+
+  if (weights.length === 0) {
+    trendEl.textContent = "—";
+    return;
+  }
+
+  if (weights.length === 1) {
+    trendEl.textContent = `${num(weights[0].weight).toFixed(1)} kg`;
+    return;
+  }
+
   if (weights.length < 6) {
-    document.getElementById("weightTrend").textContent = "—";
+    const first = num(weights[0].weight);
+    const last = num(weights[weights.length - 1].weight);
+    const diff = +(last - first).toFixed(1);
+    const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
+
+    trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
     return;
   }
 
@@ -558,8 +576,9 @@ function renderAnalytics() {
   const diff = +(avgLast - avgPrev).toFixed(1);
 
   const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
-  document.getElementById("weightTrend").textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
+  trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
 }
+
 
 function renderFoodList() {
   const box = document.getElementById("foodList");
