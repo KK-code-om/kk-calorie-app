@@ -6,6 +6,15 @@ const DEFAULT_SETTINGS = {
   water: 2000
 };
 
+const STARTER_PRODUCTS = [
+  { id: 1001, name: "Banāns", kcal: 89, protein: 1.1, carbs: 23.0, fat: 0.3, favorite: false },
+  { id: 1002, name: "Vārīta ola", kcal: 155, protein: 13.0, carbs: 1.1, fat: 11.0, favorite: false },
+  { id: 1003, name: "Biezpiens 0.5%", kcal: 72, protein: 17.0, carbs: 3.4, fat: 0.5, favorite: false },
+  { id: 1004, name: "Krējums 12%", kcal: 133, protein: 2.7, carbs: 4.0, fat: 12.0, favorite: false },
+  { id: 1005, name: "Piens 2.5%", kcal: 52, protein: 3.2, carbs: 4.7, fat: 2.5, favorite: false },
+  { id: 1006, name: "Instant oatmeal", kcal: 370, protein: 13.0, carbs: 60.0, fat: 7.0, favorite: false }
+];
+
 let currentDate = new Date().toISOString().slice(0, 10);
 let currentIngredients = [];
 
@@ -39,6 +48,13 @@ function getProducts() {
 
 function saveProducts(products) {
   localStorage.setItem("kk_products", JSON.stringify(products));
+}
+
+function ensureStarterProducts() {
+  const existing = getProducts();
+  if (existing.length === 0) {
+    saveProducts(STARTER_PRODUCTS);
+  }
 }
 
 function getRecipes() {
@@ -236,10 +252,7 @@ function importProductsCSV() {
     const c = line.split(",").map(x => x.trim());
     const name = c[idx.name];
 
-    if (!name) {
-      skipped++;
-      return;
-    }
+    if (!name) { skipped++; return; }
 
     const item = {
       name,
@@ -249,13 +262,15 @@ function importProductsCSV() {
       fat: num(c[idx.fat])
     };
 
-    const found = products.findIndex(p => String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim());
+    const found = products.findIndex(p =>
+      String(p.name || "").toLowerCase().trim() === name.toLowerCase().trim()
+    );
 
     if (found >= 0) {
       products[found] = { ...products[found], ...item, favorite: Boolean(products[found].favorite) };
       updated++;
     } else {
-      products.push({ id: Date.now() + Math.random(), ...item, favorite: false });
+      products.push({ id: Date.now() + Math.floor(Math.random() * 10000), ...item, favorite: false });
       added++;
     }
   });
@@ -440,10 +455,7 @@ function importDataFromFile(event) {
     if (status) status.textContent = msg;
   }
 
-  if (!file) {
-    setStatus("Fails nav izvēlēts.");
-    return;
-  }
+  if (!file) { setStatus("Fails nav izvēlēts."); return; }
 
   const reader = new FileReader();
 
@@ -463,12 +475,10 @@ function importDataFromFile(event) {
       }
 
       keys.forEach(k => localStorage.setItem(k, data[k]));
-
       setStatus("Import OK.");
       alert("Import OK.");
-
       event.target.value = "";
-      render();
+      renderAll();
 
     } catch (err) {
       setStatus("Import kļūda.");
@@ -535,6 +545,8 @@ function renderOverview() {
 
 function renderMealSummary() {
   const box = document.getElementById("mealSummary");
+  if (!box) return;
+
   const foods = getFoods();
 
   const names = {
@@ -547,7 +559,13 @@ function renderMealSummary() {
   clear(box);
 
   Object.keys(names).forEach(meal => {
-    const kcal = foods.filter(f => f.mealType === meal).reduce((a, f) => a + num(f.kcal), 0);
+    const items = foods.filter(f => f.mealType === meal);
+    if (!items.length) return;
+
+    const kcal = items.reduce((a, f) => a + num(f.kcal), 0);
+    const protein = items.reduce((a, f) => a + num(f.protein), 0);
+    const carbs = items.reduce((a, f) => a + num(f.carbs), 0);
+    const fat = items.reduce((a, f) => a + num(f.fat), 0);
 
     const div = document.createElement("div");
     div.className = "meal-box";
@@ -557,14 +575,20 @@ function renderMealSummary() {
     title.textContent = names[meal];
 
     const small = document.createElement("small");
-    small.textContent = `${Math.round(kcal)} kcal`;
+    small.textContent = `${Math.round(kcal)} kcal · P ${protein.toFixed(1)} · O ${carbs.toFixed(1)} · T ${fat.toFixed(1)}`;
 
     wrap.append(title, small);
     div.appendChild(wrap);
     box.appendChild(div);
   });
-}
 
+  if (!box.children.length) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Nav uztura ierakstu.";
+    box.appendChild(p);
+  }
+}
 
 function renderAnalytics() {
   const s = getSettings();
@@ -589,38 +613,28 @@ function renderAnalytics() {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const trendEl = document.getElementById("weightTrend");
+  if (!trendEl) return;
 
-  if (weights.length === 0) {
-    trendEl.textContent = "—";
-    return;
-  }
-
-  if (weights.length === 1) {
-    trendEl.textContent = `${num(weights[0].weight).toFixed(1)} kg`;
-    return;
-  }
+  if (weights.length === 0) { trendEl.textContent = "—"; return; }
+  if (weights.length === 1) { trendEl.textContent = `${num(weights[0].weight).toFixed(1)} kg`; return; }
 
   if (weights.length < 6) {
     const first = num(weights[0].weight);
     const last = num(weights[weights.length - 1].weight);
     const diff = +(last - first).toFixed(1);
     const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
-
     trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
     return;
   }
 
   const last3 = weights.slice(-3);
   const prev3 = weights.slice(-6, -3);
-
   const avgLast = last3.reduce((a, w) => a + num(w.weight), 0) / last3.length;
   const avgPrev = prev3.reduce((a, w) => a + num(w.weight), 0) / prev3.length;
   const diff = +(avgLast - avgPrev).toFixed(1);
-
   const arrow = diff > 0.05 ? "↑" : diff < -0.05 ? "↓" : "→";
   trendEl.textContent = `${arrow} ${Math.abs(diff).toFixed(1)} kg`;
 }
-
 
 function renderFoodList() {
   const box = document.getElementById("foodList");
@@ -665,14 +679,7 @@ function renderProducts() {
     ? products.filter(p => String(p.name || "").toLowerCase().includes(q))
     : products;
 
-  
-const box = document.getElementById("productList");
-if (!box) {
-  console.log("productList not found");
-  return;
-}
-
-
+  const box = document.getElementById("productList");
   if (box) {
     clear(box);
 
@@ -694,7 +701,6 @@ if (!box) {
 
         const btn = document.createElement("button");
         btn.textContent = "Dzēst";
-        btn.dataset.id = p.id;
         btn.addEventListener("click", () => deleteProduct(p.id));
 
         div.append(title, small, btn);
@@ -735,10 +741,7 @@ function renderQuickFoodPicker() {
   const q = String(document.getElementById("foodSearch")?.value || "").toLowerCase().trim();
   let products = getProducts();
 
-  if (q) {
-    products = products.filter(p => String(p.name || "").toLowerCase().includes(q));
-  }
-
+  if (q) products = products.filter(p => String(p.name || "").toLowerCase().includes(q));
   products = products.slice(0, 12);
 
   clear(box);
@@ -787,7 +790,6 @@ function renderRecipes() {
   }
 
   if (!box) return;
-
   clear(box);
 
   if (!recipes.length) {
@@ -812,7 +814,6 @@ function renderRecipes() {
 
     const btn = document.createElement("button");
     btn.textContent = "Dzēst";
-    btn.dataset.id = r.id;
     btn.addEventListener("click", () => deleteRecipe(r.id));
 
     div.append(title, small, btn);
@@ -837,22 +838,25 @@ function renderSettings() {
     : "Nav svara ierakstu.";
 }
 
-function render() {
-  renderDate();
-  renderSettings();
-  renderFoods();
+/* ===== MAIN RENDER ===== */
+function renderAll() {
+  ensureStarterProducts();
+  renderOverview();
+  renderFoodList();
   renderProducts();
   renderRecipes();
   renderTemplates();
-  renderWeights();
-  updateRecipeSelects();
+  renderSettings();
 }
+
+/* Backwards compat alias — vecais kods var saukt render() */
+function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=7.2-stable");
+  navigator.serviceWorker.register("service-worker.js?v=9.3");
 }
 
-render();
+document.addEventListener("DOMContentLoaded", renderAll);
 
 
 /* ===== V7.3 MEAL TEMPLATES ===== */
@@ -873,13 +877,7 @@ function createTemplate() {
   if (!foods.length) return alert("Nav ēdienu, ko saglabāt.");
 
   const templates = getTemplates();
-
-  templates.push({
-    id: Date.now(),
-    name,
-    items: foods
-  });
-
+  templates.push({ id: Date.now(), name, items: foods });
   saveTemplates(templates);
   document.getElementById("tmplName").value = "";
   renderTemplates();
@@ -948,10 +946,7 @@ async function lookupBarcode() {
   const code = document.getElementById("barcodeInput").value.trim();
   const status = document.getElementById("barcodeStatus");
 
-  if (!code) {
-    status.textContent = "Ievadi EAN kodu.";
-    return;
-  }
+  if (!code) { status.textContent = "Ievadi EAN kodu."; return; }
 
   status.textContent = "Meklē OpenFoodFacts...";
 
@@ -959,10 +954,7 @@ async function lookupBarcode() {
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
     const data = await res.json();
 
-    if (!data.product) {
-      status.textContent = "Produkts nav atrasts.";
-      return;
-    }
+    if (!data.product) { status.textContent = "Produkts nav atrasts."; return; }
 
     const product = data.product;
     const nutr = product.nutriments || {};
@@ -973,28 +965,12 @@ async function lookupBarcode() {
       (nutr["energy_100g"] ? nutr["energy_100g"] / 4.184 : 0) ||
       0;
 
-    const protein =
-      nutr["proteins_100g"] ||
-      nutr["protein_100g"] ||
-      nutr["proteins"] ||
-      0;
-
-    const carbs =
-      nutr["carbohydrates_100g"] ||
-      nutr["carbohydrates"] ||
-      0;
-
-    const fat =
-      nutr["fat_100g"] ||
-      nutr["fat"] ||
-      0;
+    const protein = nutr["proteins_100g"] || nutr["protein_100g"] || nutr["proteins"] || 0;
+    const carbs = nutr["carbohydrates_100g"] || nutr["carbohydrates"] || 0;
+    const fat = nutr["fat_100g"] || nutr["fat"] || 0;
 
     document.getElementById("pName").value =
-      product.product_name ||
-      product.product_name_lv ||
-      product.product_name_en ||
-      "";
-
+      product.product_name || product.product_name_lv || product.product_name_en || "";
     document.getElementById("pKcal").value = Math.round(Number(kcal) || 0);
     document.getElementById("pProtein").value = Number(protein || 0).toFixed(1);
     document.getElementById("pCarbs").value = Number(carbs || 0).toFixed(1);
@@ -1018,9 +994,7 @@ async function startBarcodeCamera() {
   const video = document.getElementById("barcodeVideo");
   const status = document.getElementById("barcodeCameraStatus");
 
-  function setStatus(msg) {
-    if (status) status.textContent = msg;
-  }
+  function setStatus(msg) { if (status) status.textContent = msg; }
 
   if (!("BarcodeDetector" in window)) {
     setStatus("Šis pārlūks neatbalsta BarcodeDetector. Lieto manuālo EAN ievadi.");
@@ -1028,38 +1002,24 @@ async function startBarcodeCamera() {
   }
 
   try {
-    barcodeStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment"
-      }
-    });
-
+    barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     video.srcObject = barcodeStream;
     video.style.display = "block";
     await video.play();
 
-    const detector = new BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
-    });
-
+    const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
     setStatus("Skenē...");
 
     barcodeScanTimer = setInterval(async () => {
       try {
         const codes = await detector.detect(video);
-
         if (codes && codes.length > 0) {
           const code = codes[0].rawValue;
-
           setStatus("Atrasts: " + code);
           stopBarcodeCamera();
-
           const input = document.getElementById("barcodeInput");
           if (input) input.value = code;
-
-          if (typeof lookupBarcode === "function") {
-            lookupBarcode();
-          }
+          lookupBarcode();
         }
       } catch (e) {
         setStatus("Skenēšanas kļūda.");
@@ -1075,25 +1035,15 @@ function stopBarcodeCamera() {
   const video = document.getElementById("barcodeVideo");
   const status = document.getElementById("barcodeCameraStatus");
 
-  if (barcodeScanTimer) {
-    clearInterval(barcodeScanTimer);
-    barcodeScanTimer = null;
-  }
+  if (barcodeScanTimer) { clearInterval(barcodeScanTimer); barcodeScanTimer = null; }
 
   if (barcodeStream) {
     barcodeStream.getTracks().forEach(track => track.stop());
     barcodeStream = null;
   }
 
-  if (video) {
-    video.pause();
-    video.srcObject = null;
-    video.style.display = "none";
-  }
-
-  if (status && status.textContent === "Skenē...") {
-    status.textContent = "Kamera apturēta.";
-  }
+  if (video) { video.pause(); video.srcObject = null; video.style.display = "none"; }
+  if (status && status.textContent === "Skenē...") status.textContent = "Kamera apturēta.";
 }
 
 /* ===== END V9 ===== */
