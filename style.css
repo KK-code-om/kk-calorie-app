@@ -91,14 +91,44 @@ button:active { opacity: 0.75; }
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 10px; margin-bottom: 14px;
 }
-.macro-tile { border-radius: 20px; padding: 14px 6px; text-align: center; }
+.macro-tile { border-radius: 20px; padding: 12px 6px; text-align: center; }
 .tile-fire { background: #fff3f0; }
 .tile-muscle { background: #f0f7ff; }
 .tile-grain { background: #fffbf0; }
-.tile-drop { background: #f0faff; }
-.tile-icon { display: block; font-size: 20px; margin-bottom: 5px; }
-.macro-tile b { display: block; font-size: 14px; font-weight: 700; }
-.macro-tile small { display: block; font-size: 10px; color: #aaa; margin-top: 2px; }
+.tile-fat { background: #fff8f0; }
+.tile-water { background: #f0faff; padding: 10px 14px; }
+.tile-icon { display: block; font-size: 20px; margin-bottom: 4px; }
+.macro-tile b { display: block; font-size: 13px; font-weight: 700; }
+.macro-tile small { display: block; font-size: 10px; color: #aaa; margin-top: 1px; }
+
+/* Progress bars */
+.macro-bar-wrap {
+  height: 4px; background: rgba(0,0,0,0.08);
+  border-radius: 2px; margin-top: 6px; overflow: hidden;
+}
+.macro-bar {
+  height: 100%; border-radius: 2px; width: 0%;
+  transition: width 0.5s ease;
+}
+.bar-protein { background: #4a9eff; }
+.bar-carbs { background: #f5a623; }
+.bar-fat { background: #f0b429; }
+.bar-water { background: #4ac8ff; }
+
+/* Water tile */
+.water-row {
+  display: flex; align-items: center; gap: 4px;
+}
+.water-btn {
+  background: #e0f4ff; color: #1a7abf; border: none;
+  border-radius: 8px; padding: 5px 8px; font-size: 12px;
+  font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.water-btn:active { opacity: 0.7; }
+.water-reset { background: #ffe5e0; color: #e8533a; }
+.water-remain {
+  margin: 4px 0 0; font-size: 11px; color: #aaa; text-align: left;
+}
 
 /* SECTION CARDS */
 .section-card {

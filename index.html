@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9.8" />
+  <link rel="stylesheet" href="style.css?v=10.0" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,10 +42,40 @@
         <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
       </div>
       <div class="macro-grid">
-        <div class="macro-tile tile-fire"><span class="tile-icon">🔥</span><b id="kcalMini">0</b><small>kcal</small></div>
-        <div class="macro-tile tile-muscle"><span class="tile-icon">💪</span><b id="proteinMini">0 g</b><small>proteīns</small></div>
-        <div class="macro-tile tile-grain"><span class="tile-icon">🌾</span><b id="carbsMini">0 g</b><small>ogļhidr.</small></div>
-        <div class="macro-tile tile-drop"><span class="tile-icon">💧</span><b id="fatMini">0 g</b><small>tauki</small></div>
+        <div class="macro-tile tile-fire">
+          <span class="tile-icon">🔥</span>
+          <b id="kcalMini">0</b>
+          <small>kcal</small>
+        </div>
+        <div class="macro-tile tile-muscle">
+          <span class="tile-icon">💪</span>
+          <b id="proteinMini">0 g</b>
+          <small>proteīns</small>
+          <div class="macro-bar-wrap"><div class="macro-bar bar-protein" id="barProtein"></div></div>
+        </div>
+        <div class="macro-tile tile-grain">
+          <span class="tile-icon">🌾</span>
+          <b id="carbsMini">0 g</b>
+          <small>ogļhidr.</small>
+          <div class="macro-bar-wrap"><div class="macro-bar bar-carbs" id="barCarbs"></div></div>
+        </div>
+        <div class="macro-tile tile-fat">
+          <span class="tile-icon">🧈</span>
+          <b id="fatMini">0 g</b>
+          <small>tauki</small>
+          <div class="macro-bar-wrap"><div class="macro-bar bar-fat" id="barFat"></div></div>
+        </div>
+        <div class="macro-tile tile-water" style="grid-column: span 4;">
+          <div class="water-row">
+            <span class="tile-icon" style="font-size:18px;margin:0 6px 0 0">💧</span>
+            <b id="waterMini">0 ml</b>
+            <div class="macro-bar-wrap" style="flex:1;margin:0 10px"><div class="macro-bar bar-water" id="barWater"></div></div>
+            <button class="water-btn" onclick="addWater(250)">+250</button>
+            <button class="water-btn" onclick="addWater(500)">+500</button>
+            <button class="water-btn water-reset" onclick="resetWater()">✕</button>
+          </div>
+          <p id="waterRemain" class="water-remain"></p>
+        </div>
       </div>
       <div class="section-card">
         <h2>Uzturs šodien</h2>
@@ -285,6 +315,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=9.8"></script>
+  <script src="app.js?v=10.0"></script>
 </body>
 </html>

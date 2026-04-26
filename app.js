@@ -131,7 +131,7 @@ function editFood(id) {
     return;
   }
 
-  const newGrams = prompt(`Jauns svars gramOS (bija ${currentGrams}g):`, currentGrams);
+  const newGrams = prompt(`Jauns svars gramos (bija ${currentGrams}g):`, currentGrams);
   if (newGrams === null) return;
   const g = num(newGrams);
   if (!g || g <= 0) return alert("Nederīgs svars.");
@@ -203,10 +203,14 @@ function renderProductDatalist() {
 }
 
 function pickerOpen(dropdownId) {
-  const input = dropdownId === "portionDropdown"
-    ? document.getElementById("portionFoodSearch")
-    : document.getElementById("rProductSearch");
-  pickerFilter(input.id, dropdownId);
+  const map = {
+    "portionDropdown": "portionFoodSearch",
+    "rDropdown": "rProductSearch",
+    "rdDropdown": "rdProductSearch"
+  };
+  const inputId = map[dropdownId];
+  if (!inputId) return;
+  pickerFilter(inputId, dropdownId);
 }
 
 function pickerFilter(inputId, dropdownId) {
@@ -254,9 +258,14 @@ function pickerClose(dropdownId) {
 
 // Close dropdowns on outside click/touch
 document.addEventListener("click", e => {
-  ["portionDropdown","rDropdown"].forEach(id => {
-    const dd = document.getElementById(id);
-    if (dd && !dd.contains(e.target) && e.target.id !== "portionFoodSearch" && e.target.id !== "rProductSearch") {
+  const dropMap = {
+    "portionDropdown": "portionFoodSearch",
+    "rDropdown": "rProductSearch",
+    "rdDropdown": "rdProductSearch"
+  };
+  Object.entries(dropMap).forEach(([ddId, inputId]) => {
+    const dd = document.getElementById(ddId);
+    if (dd && !dd.contains(e.target) && e.target.id !== inputId) {
       dd.classList.remove("open");
     }
   });
@@ -430,6 +439,23 @@ function updateGauge(pct) {
   arc.style.strokeDashoffset = 251.3 - (251.3 * Math.min(pct, 100) / 100);
 }
 
+/* ===== WATER TRACKING ===== */
+function getWater(date = currentDate) {
+  return parseInt(localStorage.getItem("water_" + date) || "0", 10);
+}
+function saveWater(ml, date = currentDate) {
+  localStorage.setItem("water_" + date, String(ml));
+}
+function addWater(ml) {
+  saveWater(getWater() + ml);
+  renderOverview();
+}
+function resetWater() {
+  saveWater(0);
+  renderOverview();
+}
+/* ===== END WATER ===== */
+
 function renderOverview() {
   const foods = getFoods();
   const s = getSettings();
@@ -445,6 +471,26 @@ function renderOverview() {
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
   document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
   updateGauge(Math.round((totals.kcal / s.kcal) * 100));
+
+  // Progress bars
+  const pctP = Math.min(100, Math.round((totals.protein / s.protein) * 100));
+  const pctC = Math.min(100, Math.round((totals.carbs / s.carbs) * 100));
+  const pctF = Math.min(100, Math.round((totals.fat / s.fat) * 100));
+  const setBar = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + "%"; };
+  setBar("barProtein", pctP);
+  setBar("barCarbs", pctC);
+  setBar("barFat", pctF);
+
+  // Water
+  const water = getWater();
+  const waterTarget = s.water || 2000;
+  const pctW = Math.min(100, Math.round((water / waterTarget) * 100));
+  const waterEl = document.getElementById("waterMini");
+  if (waterEl) waterEl.textContent = water + " ml";
+  setBar("barWater", pctW);
+  const waterRemEl = document.getElementById("waterRemain");
+  if (waterRemEl) waterRemEl.textContent = "Ūdens: " + water + " / " + waterTarget + " ml";
+
   renderMealSummary();
 }
 
@@ -776,7 +822,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=9.9");
+  navigator.serviceWorker.register("service-worker.js?v=10.0");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
