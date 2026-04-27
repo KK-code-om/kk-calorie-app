@@ -190,6 +190,62 @@ function deleteProduct(id) {
   renderProductDatalist();
 }
 
+function editProduct(id) {
+  const products = getProducts();
+  const p = products.find(x => String(x.id) === String(id));
+  if (!p) return;
+
+  // Fill the add-product form with existing data
+  document.getElementById("pName").value = p.name;
+  document.getElementById("pKcal").value = p.kcal;
+  document.getElementById("pProtein").value = p.protein;
+  document.getElementById("pCarbs").value = p.carbs;
+  document.getElementById("pFat").value = p.fat;
+
+  // Change save button to update mode
+  const saveBtn = document.getElementById("saveProductBtn");
+  if (saveBtn) {
+    saveBtn.textContent = "Atjaunināt produktu";
+    saveBtn.dataset.editId = id;
+    saveBtn.onclick = () => updateProduct(id);
+  }
+
+  // Scroll to top of products screen
+  window.scrollTo(0, 0);
+}
+
+function updateProduct(id) {
+  const name = document.getElementById("pName").value.trim();
+  if (!name) return alert("Ievadi nosaukumu.");
+  const products = getProducts();
+  const idx = products.findIndex(p => String(p.id) === String(id));
+  if (idx < 0) return alert("Produkts nav atrasts.");
+
+  products[idx] = {
+    ...products[idx],
+    name,
+    kcal: num(document.getElementById("pKcal").value),
+    protein: num(document.getElementById("pProtein").value),
+    carbs: num(document.getElementById("pCarbs").value),
+    fat: num(document.getElementById("pFat").value)
+  };
+
+  saveProducts(products);
+  ["pName","pKcal","pProtein","pCarbs","pFat"].forEach(id => document.getElementById(id).value = "");
+
+  // Reset save button
+  const saveBtn = document.getElementById("saveProductBtn");
+  if (saveBtn) {
+    saveBtn.textContent = "Saglabāt produktu";
+    saveBtn.onclick = saveProduct;
+    delete saveBtn.dataset.editId;
+  }
+
+  renderProducts();
+  renderProductDatalist();
+  alert("Produkts atjaunināts.");
+}
+
 /* ===== CUSTOM FOOD PICKER ===== */
 let pickerProducts = [];
 
@@ -222,7 +278,7 @@ function pickerFilter(inputId, dropdownId) {
   const products = getProducts();
   const filtered = q
     ? products.filter(p => p.name.toLowerCase().includes(q))
-    : products.slice(0, 30);
+    : products.slice(0, 200);
 
   dd.innerHTML = "";
 
@@ -593,12 +649,18 @@ function renderProducts() {
     if (!filtered.length) { const p = document.createElement("p"); p.className = "muted-text"; p.textContent = "Nav produktu."; box.appendChild(p); }
     else filtered.forEach(p => {
       const div = document.createElement("div"); div.className = "food-item";
-      const info = document.createElement("div");
+      const info = document.createElement("div"); info.style.flex = "1";
       const title = document.createElement("strong"); title.textContent = p.name;
       const small = document.createElement("small"); small.textContent = `${num(p.kcal)} kcal | P:${num(p.protein)} C:${num(p.carbs)} F:${num(p.fat)}`;
       info.append(title, small);
-      const btn = document.createElement("button"); btn.textContent = "Dzēst"; btn.addEventListener("click", () => deleteProduct(p.id));
-      div.append(info, btn); box.appendChild(div);
+      const btnWrap = document.createElement("div"); btnWrap.style.cssText = "display:flex;gap:6px;flex-shrink:0;";
+      const editBtn = document.createElement("button"); editBtn.textContent = "✏️";
+      editBtn.style.cssText = "background:#f0ede8;color:#1a1a1a;padding:7px 10px;font-size:14px;border-radius:10px;";
+      editBtn.addEventListener("click", () => editProduct(p.id));
+      const delBtn = document.createElement("button"); delBtn.textContent = "Dzēst";
+      delBtn.addEventListener("click", () => deleteProduct(p.id));
+      btnWrap.append(editBtn, delBtn);
+      div.append(info, btnWrap); box.appendChild(div);
     });
   }
   renderProductDatalist();
@@ -822,7 +884,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.0");
+  navigator.serviceWorker.register("service-worker.js?v=10.1");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
