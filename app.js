@@ -276,9 +276,14 @@ function pickerFilter(inputId, dropdownId) {
 
   const q = input.value.toLowerCase().trim();
   const products = getProducts();
-  const filtered = q
-    ? products.filter(p => p.name.toLowerCase().includes(q))
-    : products.slice(0, 200);
+  let filtered;
+  if (q) {
+    const starts = products.filter(p => p.name.toLowerCase().startsWith(q));
+    const contains = products.filter(p => !p.name.toLowerCase().startsWith(q) && p.name.toLowerCase().includes(q));
+    filtered = [...starts, ...contains];
+  } else {
+    filtered = products.slice(0, 200);
+  }
 
   dd.innerHTML = "";
 
@@ -296,7 +301,13 @@ function pickerFilter(inputId, dropdownId) {
       input.value = p.name;
       dd.classList.remove("open");
     });
+    let touchStartY = 0;
     item.addEventListener("touchstart", e => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    item.addEventListener("touchend", e => {
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+      if (dy > 8) return; // scroll — ignore
       e.preventDefault();
       input.value = p.name;
       dd.classList.remove("open");
@@ -884,7 +895,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.1");
+  navigator.serviceWorker.register("service-worker.js?v=10.3");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);
