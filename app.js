@@ -1,4 +1,4 @@
-const DEFAULT_SETTINGS = { kcal: 1900, protein: 130, carbs: 190, fat: 70, water: 2000 };
+const DEFAULT_SETTINGS = { kcal: 1900, protein: 130, carbs: 190, fat: 70, water: 2000, bmrGender: 'male', bmrAge: 40, bmrHeight: 178, deficit: 700 };
 const STARTER_PRODUCTS = [
   { id: 1001, name: "Banāns", kcal: 89, protein: 1.1, carbs: 23.0, fat: 0.3, favorite: false },
   { id: 1002, name: "Vārīta ola", kcal: 155, protein: 13.0, carbs: 1.1, fat: 11.0, favorite: false },
@@ -49,7 +49,7 @@ function showTab(tab) {
   if (tab === "recipes") { renderRecipes(); renderProductDatalist(); }
   if (tab === "recipe-detail") { renderProductDatalist(); }
   if (tab === "analytics") renderAnalytics();
-  if (tab === "weight") renderWeight();
+  if (tab === "weight") { renderWeight(); }
   if (tab === "settings") renderSettings();
 }
 
@@ -443,15 +443,19 @@ function addRecipePortion() {
 }
 
 function saveWeight() {
-  const weight = num(document.getElementById("weightInput").value);
+  const input = document.getElementById("weightInput");
+  const weight = num(input ? input.value : 0);
   if (!weight) return;
   let weights = JSON.parse(localStorage.getItem("weights")) || [];
   weights = weights.filter(w => w.date !== currentDate);
   weights.push({ date: currentDate, weight });
   weights.sort((a, b) => a.date.localeCompare(b.date));
   localStorage.setItem("weights", JSON.stringify(weights));
-  document.getElementById("weightInput").value = "";
-  renderWeight(); renderAnalytics();
+  if (input) input.value = "";
+  renderSettings();
+  renderWeight();
+  renderAnalytics();
+  renderOverview();
 }
 
 function saveSettings() {
@@ -530,19 +534,34 @@ function renderOverview() {
   updateDayLabel();
   document.getElementById("datePicker").value = currentDate;
   document.getElementById("dateLabel").textContent = currentDate;
+  // TDEE calculation
+  const bmr = calcBmr(s);
+  const activityKcal = getActivityKcal();
+  const tdee = bmr + activityKcal;
+  const deficit = s.deficit || 700;
+  const dailyTarget = activityKcal > 0 ? tdee - deficit : s.kcal;
+
   document.getElementById("totalKcal").textContent = Math.round(totals.kcal);
-  document.getElementById("targetKcal").textContent = s.kcal;
-  document.getElementById("remainingKcal").textContent = Math.round(s.kcal - totals.kcal);
+  document.getElementById("targetKcal").textContent = dailyTarget;
+  document.getElementById("remainingKcal").textContent = Math.round(dailyTarget - totals.kcal);
+
+  const tdeeEl = document.getElementById("tdeeDisplay");
+  if (tdeeEl) tdeeEl.textContent = activityKcal > 0 ? `BMR ${bmr} + ${activityKcal} = TDEE ${tdee}` : `BMR: ${bmr} kcal`;
+  const targetEl = document.getElementById("targetDisplay");
+  if (targetEl) targetEl.textContent = activityKcal > 0 ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
+
+  const actInput = document.getElementById("activityKcal");
+  if (actInput && activityKcal > 0 && !actInput.value) actInput.placeholder = `Vakar: ${activityKcal} kcal`;
   document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
   document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
   document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
-  updateGauge(Math.round((totals.kcal / s.kcal) * 100));
+  updateGauge(Math.round((totals.kcal / dailyTarget) * 100));
 
   // Progress bars
-  const pctP = Math.min(100, Math.round((totals.protein / s.protein) * 100));
-  const pctC = Math.min(100, Math.round((totals.carbs / s.carbs) * 100));
-  const pctF = Math.min(100, Math.round((totals.fat / s.fat) * 100));
+  const pctP = s.protein > 0 ? Math.min(100, Math.round((totals.protein / s.protein) * 100)) : 0;
+  const pctC = s.carbs > 0 ? Math.min(100, Math.round((totals.carbs / s.carbs) * 100)) : 0;
+  const pctF = s.fat > 0 ? Math.min(100, Math.round((totals.fat / s.fat) * 100)) : 0;
   const setBar = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + "%"; };
   setBar("barProtein", pctP);
   setBar("barCarbs", pctC);
@@ -703,11 +722,19 @@ function renderRecipes() {
   });
 }
 
+function getLastWeight() {
+  const weights = JSON.parse(localStorage.getItem("weights")) || [];
+  return weights.length ? num(weights[weights.length - 1].weight) : 0;
+}
+
 function renderWeight() {
   const weights = JSON.parse(localStorage.getItem("weights")) || [];
   const last = weights[weights.length - 1];
-  const lw = document.getElementById("lastWeight");
-  if (lw) lw.textContent = last ? `Pēdējais: ${last.weight} kg (${last.date})` : "Nav ierakstu.";
+  const lastText = last ? `Pēdējais: ${last.weight} kg (${last.date})` : "Nav svara ierakstu.";
+  ["lastWeight", "lastWeightDisplay"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = lastText;
+  });
   const box = document.getElementById("weightHistory");
   if (!box) return;
   clear(box);
@@ -721,6 +748,37 @@ function renderWeight() {
   });
 }
 
+function calcBmr(s, weight) {
+  // Mifflin-St Jeor
+  const w = weight || getLastWeight() || 80;
+  const h = s.bmrHeight || 178;
+  const a = s.bmrAge || 40;
+  if (s.bmrGender === 'female') return Math.round(10*w + 6.25*h - 5*a - 161);
+  return Math.round(10*w + 6.25*h - 5*a + 5);
+}
+
+function getActivityKcal(date = currentDate) {
+  return parseInt(localStorage.getItem("activity_" + date) || "0", 10);
+}
+function saveActivityKcal() {
+  const input = document.getElementById("activityKcal");
+  const val = num(input ? input.value : 0);
+  localStorage.setItem("activity_" + currentDate, String(val));
+  renderOverview();
+}
+
+function saveBmrSettings() {
+  const s = getSettings();
+  s.bmrGender = document.getElementById("setBmrGender")?.value || "male";
+  s.bmrAge = num(document.getElementById("setBmrAge")?.value) || 40;
+  s.bmrHeight = num(document.getElementById("setBmrHeight")?.value) || 178;
+  s.deficit = num(document.getElementById("setDeficit")?.value) || 700;
+  saveSettingsData(s);
+  renderSettings();
+  renderOverview();
+  alert("BMR iestatījumi saglabāti.");
+}
+
 function renderSettings() {
   const s = getSettings();
   document.getElementById("setKcal").value = s.kcal;
@@ -728,6 +786,21 @@ function renderSettings() {
   document.getElementById("setCarbs").value = s.carbs;
   document.getElementById("setFat").value = s.fat;
   document.getElementById("setWater").value = s.water;
+
+  const genderEl = document.getElementById("setBmrGender");
+  if (genderEl) genderEl.value = s.bmrGender || "male";
+  const ageEl = document.getElementById("setBmrAge");
+  if (ageEl) ageEl.value = s.bmrAge || "";
+  const heightEl = document.getElementById("setBmrHeight");
+  if (heightEl) heightEl.value = s.bmrHeight || "";
+  const deficitEl = document.getElementById("setDeficit");
+  if (deficitEl) deficitEl.value = s.deficit || 700;
+
+  const bmr = calcBmr(s);
+  const bmrEl = document.getElementById("bmrResult");
+  if (bmrEl) bmrEl.textContent = `BMR: ${bmr} kcal/dienā (Mifflin-St Jeor)`;
+
+  renderWeight();
 }
 
 function renderTemplates() {
@@ -895,7 +968,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.3");
+  navigator.serviceWorker.register("service-worker.js?v=10.4");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10.1" />
+  <link rel="stylesheet" href="style.css?v=10.4" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -40,6 +40,16 @@
           </div>
         </div>
         <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
+        <div class="tdee-row">
+          <div class="tdee-info">
+            <span id="tdeeDisplay">TDEE: —</span>
+            <span id="targetDisplay">Mērķis: — kcal</span>
+          </div>
+          <div class="activity-input-wrap">
+            <input id="activityKcal" type="number" placeholder="Aktivitāte kcal" class="activity-input" />
+            <button class="activity-save-btn" onclick="saveActivityKcal()">OK</button>
+          </div>
+        </div>
       </div>
       <div class="macro-grid">
         <div class="macro-tile tile-fire">
@@ -270,15 +280,8 @@
       <div class="top-bar-right"><p class="top-label">Izsekošana</p><h1>Svars</h1></div>
       </header>
       <div class="section-card">
-        <h2>Ievadīt svaru</h2>
-        <div class="field-row">
-          <input id="weightInput" type="number" step="0.1" placeholder="Svars kg" class="field" />
-          <button class="btn-primary" onclick="saveWeight()">Saglabāt</button>
-        </div>
-        <p id="lastWeight" class="muted-text"></p>
-      </div>
-      <div class="section-card">
-        <h2>Vēsture</h2>
+        <h2>Svara vēsture</h2>
+        <p id="lastWeightDisplay" class="muted-text"></p>
         <div id="weightHistory"></div>
       </div>
     </section>
@@ -290,7 +293,31 @@
       <div class="top-bar-right"><p class="top-label">Konfigurācija</p><h1>Iestatījumi</h1></div>
       </header>
       <div class="section-card">
-        <h2>Mērķi</h2>
+        <h2>Svars</h2>
+        <div class="field-row">
+          <input id="weightInput" type="number" step="0.1" placeholder="Svars kg" class="field" />
+          <button class="btn-primary" onclick="saveWeight()">Saglabāt</button>
+        </div>
+        <p id="lastWeight" class="muted-text"></p>
+      </div>
+
+      <div class="section-card">
+        <h2>BMR & TDEE</h2>
+        <div class="field-row">
+          <select id="setBmrGender" class="field">
+            <option value="male">Vīrietis</option>
+            <option value="female">Sieviete</option>
+          </select>
+          <input id="setBmrAge" type="number" placeholder="Vecums" class="field" />
+        </div>
+        <input id="setBmrHeight" type="number" placeholder="Augums cm" class="field" />
+        <input id="setDeficit" type="number" placeholder="Deficīts kcal/dienā" class="field" />
+        <div class="bmr-result" id="bmrResult">BMR: — kcal</div>
+        <button class="btn-primary full-width" onclick="saveBmrSettings()">Saglabāt BMR iestatījumus</button>
+      </div>
+
+      <div class="section-card">
+        <h2>Makro mērķi</h2>
         <div class="field-row">
           <input id="setKcal" type="number" placeholder="kcal" class="field" />
           <input id="setProtein" type="number" placeholder="Proteīns g" class="field" />
@@ -315,6 +342,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=10.1"></script>
+  <script src="app.js?v=10.4"></script>
 </body>
 </html>

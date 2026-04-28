@@ -278,7 +278,7 @@ textarea {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
   background: #fff; border-radius: 16px; z-index: 200;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  max-height: 240px; overflow-y: auto;
+  max-height: 320px; overflow-y: auto;
   display: none;
 }
 .picker-dropdown.open { display: block; }
@@ -289,3 +289,39 @@ textarea {
 .picker-item:last-child { border-bottom: none; }
 .picker-item:active, .picker-item.selected { background: #fff3f0; color: #e8533a; font-weight: 600; }
 .picker-item small { display: block; font-size: 11px; color: #aaa; margin-top: 1px; }
+/* ===== TDEE / ACTIVITY ===== */
+.tdee-row {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.tdee-info {
+  display: flex; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tdee-info span {
+  font-size: 12px; color: #888;
+}
+#targetDisplay { color: #e8533a; font-weight: 600; }
+.activity-input-wrap {
+  display: flex; gap: 8px; align-items: center;
+}
+.activity-input {
+  flex: 1; background: rgba(255,255,255,0.08); color: #fff;
+  border: none; border-radius: 10px; padding: 9px 12px;
+  font-size: 14px; font-family: 'DM Sans', Arial, sans-serif;
+}
+.activity-input::placeholder { color: #666; }
+.activity-input:focus { outline: 1px solid #e8533a; }
+.activity-save-btn {
+  background: #e8533a; color: #fff; border: none;
+  border-radius: 10px; padding: 9px 16px; font-size: 14px;
+  font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.activity-save-btn:active { opacity: 0.75; }
+
+/* BMR result display */
+.bmr-result {
+  background: #f0f7ff; border-radius: 14px;
+  padding: 12px 14px; font-size: 14px; font-weight: 600;
+  color: #1a4a8a; margin-bottom: 8px; text-align: center;
+}
