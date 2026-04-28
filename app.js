@@ -470,11 +470,12 @@ function saveSettings() {
 }
 
 function exportData() {
-  const data = {};
-  Object.keys(localStorage).forEach(k => { if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights") data[k] = localStorage.getItem(k); });
+  saveAutoExport(); // save to rotation
+  const data = collectExportData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = `kk-calories-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  renderExportRotation();
 }
 
 function importDataFromFile(event) {
@@ -817,6 +818,7 @@ function renderSettings() {
   }
 
   renderWeight();
+  renderExportRotation();
 }
 
 function renderTemplates() {
@@ -970,6 +972,128 @@ function rdSaveRecipe() {
 }
 /* ===== END RECIPE DETAIL ===== */
 
+
+/* ===== AUTO EXPORT SYSTEM ===== */
+const MAX_STORED_EXPORTS = 5;
+
+function collectExportData() {
+  const data = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_") || k.startsWith("water_"))
+      data[k] = localStorage.getItem(k);
+  });
+  return data;
+}
+
+function saveAutoExport() {
+  const data = collectExportData();
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const json = JSON.stringify(data);
+
+  // Load existing rotation
+  let rotation = JSON.parse(localStorage.getItem("kk_export_rotation") || "[]");
+
+  // Remove existing entry for same date
+  rotation = rotation.filter(e => e.date !== dateStr);
+
+  // Add new entry
+  rotation.push({ date: dateStr, ts: Date.now() });
+
+  // Keep only last 5
+  if (rotation.length > MAX_STORED_EXPORTS) {
+    const oldest = rotation.shift();
+    localStorage.removeItem("kk_export_" + oldest.date);
+  }
+
+  localStorage.setItem("kk_export_" + dateStr, json);
+  localStorage.setItem("kk_export_rotation", JSON.stringify(rotation));
+  localStorage.setItem("kk_last_export_date", dateStr);
+  return dateStr;
+}
+
+function downloadExport(dateStr) {
+  const json = localStorage.getItem("kk_export_" + dateStr);
+  if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
+  const blob = new Blob([json], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kk-calories-" + dateStr + ".json";
+  a.click();
+}
+
+function checkAutoExportPrompt() {
+  const now = new Date();
+  const hour = now.getHours();
+  const todayStr = now.toISOString().slice(0, 10);
+  const lastExport = localStorage.getItem("kk_last_export_date") || "";
+  const dismissed = localStorage.getItem("kk_export_dismissed_today") || "";
+
+  // Show between 21:00-23:59, only if not yet exported today and not dismissed today
+  if (hour >= 21 && lastExport !== todayStr && dismissed !== todayStr) {
+    showExportBanner();
+  }
+}
+
+function showExportBanner() {
+  if (document.getElementById("exportBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "exportBanner";
+  banner.style.cssText = `
+    position: fixed; bottom: 20px; left: 16px; right: 16px;
+    background: #1a1a1a; color: #fff; border-radius: 20px;
+    padding: 16px 18px; z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  `;
+  banner.innerHTML = `
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px;margin-bottom:2px">💾 Saglabāt datus?</div>
+      <div style="font-size:12px;color:#888">Ieteicams eksportēt katru vakaru</div>
+    </div>
+    <button onclick="doAutoExport()" style="background:#e8533a;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Eksportēt</button>
+    <button onclick="dismissExportBanner()" style="background:#333;color:#aaa;border:none;border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer">✕</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function doAutoExport() {
+  const dateStr = saveAutoExport();
+  // Also trigger download
+  exportData();
+  dismissExportBanner();
+}
+
+function dismissExportBanner() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  localStorage.setItem("kk_export_dismissed_today", todayStr);
+  const banner = document.getElementById("exportBanner");
+  if (banner) banner.remove();
+}
+
+function renderExportRotation() {
+  const box = document.getElementById("exportRotationList");
+  if (!box) return;
+  const rotation = JSON.parse(localStorage.getItem("kk_export_rotation") || "[]");
+  box.innerHTML = "";
+  if (!rotation.length) {
+    box.innerHTML = '<p class="muted-text">Nav saglabātu eksportu.</p>';
+    return;
+  }
+  [...rotation].reverse().forEach(e => {
+    const row = document.createElement("div");
+    row.className = "weight-row";
+    const label = document.createElement("span");
+    label.textContent = e.date;
+    const btn = document.createElement("button");
+    btn.textContent = "⬇ Lejupielādēt";
+    btn.style.cssText = "background:#f0ede8;color:#1a1a1a;padding:7px 12px;font-size:13px;border-radius:10px;";
+    btn.addEventListener("click", () => downloadExport(e.date));
+    row.append(label, btn);
+    box.appendChild(row);
+  });
+}
+/* ===== END AUTO EXPORT ===== */
+
 function renderAll() {
   ensureStarterProducts();
   renderOverview();
@@ -984,7 +1108,12 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.5");
+  navigator.serviceWorker.register("service-worker.js?v=10.6");
 }
 
-document.addEventListener("DOMContentLoaded", renderAll);
+document.addEventListener("DOMContentLoaded", () => {
+  renderAll();
+  // Check auto-export every minute
+  checkAutoExportPrompt();
+  setInterval(checkAutoExportPrompt, 60000);
+});

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10.5" />
+  <link rel="stylesheet" href="style.css?v=10.6" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -345,9 +345,15 @@
         <button class="btn-ghost full-width" onclick="document.getElementById('importJsonFile').click()">Import JSON</button>
         <p id="importStatus" class="muted-text"></p>
       </div>
+
+      <div class="section-card">
+        <h2>Saglabātie eksporti (pēdējie 5)</h2>
+        <p class="muted-text small-text">Katrs eksports automātiski saglabājas šeit. Vakara paziņojums plkst. 21:00.</p>
+        <div id="exportRotationList"></div>
+      </div>
     </section>
 
   </main>
-  <script src="app.js?v=10.5"></script>
+  <script src="app.js?v=10.6"></script>
 </body>
 </html>
