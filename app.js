@@ -550,8 +550,7 @@ function renderOverview() {
   const targetEl = document.getElementById("targetDisplay");
   if (targetEl) targetEl.textContent = activityKcal > 0 ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
 
-  const actInput = document.getElementById("activityKcal");
-  if (actInput && activityKcal > 0 && !actInput.value) actInput.placeholder = `Vakar: ${activityKcal} kcal`;
+
   document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
   document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
@@ -764,6 +763,8 @@ function saveActivityKcal() {
   const input = document.getElementById("activityKcal");
   const val = num(input ? input.value : 0);
   localStorage.setItem("activity_" + currentDate, String(val));
+  if (input) input.value = "";
+  renderSettings();
   renderOverview();
 }
 
@@ -799,6 +800,21 @@ function renderSettings() {
   const bmr = calcBmr(s);
   const bmrEl = document.getElementById("bmrResult");
   if (bmrEl) bmrEl.textContent = `BMR: ${bmr} kcal/dienā (Mifflin-St Jeor)`;
+
+  // Activity field
+  const actInput = document.getElementById("activityKcal");
+  const actStatus = document.getElementById("activityStatus");
+  const storedActivity = getActivityKcal();
+  if (actInput) actInput.placeholder = storedActivity > 0 ? `Pašlaik: ${storedActivity} kcal` : "Aktivitāte kcal";
+  if (actStatus) {
+    if (storedActivity > 0) {
+      const tdee = bmr + storedActivity;
+      const deficit = s.deficit || 700;
+      actStatus.textContent = `TDEE: ${bmr} + ${storedActivity} = ${tdee} kcal → Mērķis: ${tdee - deficit} kcal`;
+    } else {
+      actStatus.textContent = "Nav ievadīts — tiek izmantots manuālais mērķis";
+    }
+  }
 
   renderWeight();
 }
@@ -968,7 +984,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.4");
+  navigator.serviceWorker.register("service-worker.js?v=10.5");
 }
 
 document.addEventListener("DOMContentLoaded", renderAll);

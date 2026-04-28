@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10.4" />
+  <link rel="stylesheet" href="style.css?v=10.5" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,12 +42,8 @@
         <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
         <div class="tdee-row">
           <div class="tdee-info">
-            <span id="tdeeDisplay">TDEE: —</span>
+            <span id="tdeeDisplay">BMR: —</span>
             <span id="targetDisplay">Mērķis: — kcal</span>
-          </div>
-          <div class="activity-input-wrap">
-            <input id="activityKcal" type="number" placeholder="Aktivitāte kcal" class="activity-input" />
-            <button class="activity-save-btn" onclick="saveActivityKcal()">OK</button>
           </div>
         </div>
       </div>
@@ -317,6 +313,16 @@
       </div>
 
       <div class="section-card">
+        <h2>Vakardienas aktivitāte</h2>
+        <p class="muted-text small-text">Ievadi Myfitness / pulksteņa datus — TDEE aprēķinās automātiski</p>
+        <div class="field-row">
+          <input id="activityKcal" type="number" placeholder="Aktivitāte kcal" class="field" />
+          <button class="btn-primary" onclick="saveActivityKcal()">Saglabāt</button>
+        </div>
+        <p id="activityStatus" class="muted-text"></p>
+      </div>
+
+      <div class="section-card">
         <h2>Makro mērķi</h2>
         <div class="field-row">
           <input id="setKcal" type="number" placeholder="kcal" class="field" />
@@ -342,6 +348,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=10.4"></script>
+  <script src="app.js?v=10.5"></script>
 </body>
 </html>
