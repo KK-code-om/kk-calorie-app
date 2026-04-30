@@ -432,14 +432,54 @@ function saveSettings() {
   renderOverview();
 }
 
-function exportData() {
+/* ===== EXPORT — iOS Share Sheet + fallback ===== */
+async function shareJsonFile(json, filename) {
+  // iOS PWA: Web Share API ar File objektu — atver Share Sheet → "Save to Files" → iCloud Drive
+  if (navigator.canShare) {
+    try {
+      const file = new File([json], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return true;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") return true; // lietotājs aizvēra share sheet — OK
+    }
+  }
+  // Fallback: data URI (strādā uz Mac Safari un vecākiem iOS)
+  try {
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
+    const a = document.createElement("a");
+    a.href = dataUri;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return true;
+  } catch(e) {
+    // Pēdējais fallback: jauns logs
+    const blob = new Blob([json], { type: "application/json" });
+    window.open(URL.createObjectURL(blob), "_blank");
+    return true;
+  }
+}
+
+async function exportData() {
   saveAutoExport();
   const data = collectExportData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = `kk-calories-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  const json = JSON.stringify(data, null, 2);
+  const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
+  await shareJsonFile(json, filename);
   renderExportRotation();
 }
+
+async function downloadExport(dateStr) {
+  const json = localStorage.getItem("kk_export_" + dateStr);
+  if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
+  const filename = "kk-calories-" + dateStr + ".json";
+  await shareJsonFile(json, filename);
+}
+/* ===== END EXPORT ===== */
 
 function importDataFromFile(event) {
   const file = event.target.files && event.target.files[0];
@@ -449,23 +489,41 @@ function importDataFromFile(event) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      const invalid = Object.keys(data).filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights"));
+      const invalid = Object.keys(data).filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_")));
       if (invalid.length) { alert("Import atteikts: " + invalid.join(", ")); return; }
       Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-      if (status) status.textContent = "Import OK."; alert("Import OK."); event.target.value = ""; renderAll();
+      if (status) status.textContent = "Import OK.";
+      alert("Import OK.");
+      event.target.value = "";
+      renderAll();
     } catch { alert("Import kļūda."); }
   };
   reader.readAsText(file);
 }
 
-function exportCSV() {
+async function exportCSV() {
   const rows = [["date","meal","food","kcal","protein","carbs","fat"]];
   Object.keys(localStorage).filter(k => k.startsWith("foods_")).sort().forEach(k => {
     const date = k.replace("foods_", "");
     (JSON.parse(localStorage.getItem(k))||[]).forEach(f => rows.push([date, f.mealType||"", f.name, f.kcal, f.protein, f.carbs, f.fat]));
   });
-  const blob = new Blob([rows.map(r=>r.join(",")).join("\n")], { type: "text/csv" });
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "kk-calories.csv"; a.click();
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const filename = "kk-calories.csv";
+  if (navigator.canShare) {
+    try {
+      const file = new File([csv], filename, { type: "text/csv" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") return;
+    }
+  }
+  const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  const a = document.createElement("a");
+  a.href = dataUri; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function updateGauge(pct) {
@@ -482,7 +540,6 @@ function renderOverview() {
   document.getElementById("datePicker").value = currentDate;
   document.getElementById("dateLabel").textContent = currentDate;
 
-  // TDEE calculation
   const bmr = calcBmr(s);
   const activityKcal = getActivityKcal();
   const tdee = bmr + activityKcal;
@@ -498,12 +555,10 @@ function renderOverview() {
   const targetEl = document.getElementById("targetDisplay");
   if (targetEl) targetEl.textContent = activityKcal > 0 ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
 
-  // Auto macro targets from dailyTarget
   const macroProtein = activityKcal > 0 ? Math.round(dailyTarget * 0.25 / 4) : s.protein;
   const macroCarbs   = activityKcal > 0 ? Math.round(dailyTarget * 0.40 / 4) : s.carbs;
   const macroFat     = activityKcal > 0 ? Math.round(dailyTarget * 0.35 / 9) : s.fat;
 
-  // Macro mini tiles — value + target
   document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
   const kcalTargetEl = document.getElementById("kcalTarget");
   if (kcalTargetEl) kcalTargetEl.textContent = `no ${dailyTarget} kcal`;
@@ -520,7 +575,6 @@ function renderOverview() {
   const fatTargetEl = document.getElementById("fatTarget");
   if (fatTargetEl) fatTargetEl.textContent = `no ${macroFat} g tauki`;
 
-  // Progress bars
   const pctP = macroProtein > 0 ? Math.min(100, Math.round((totals.protein / macroProtein) * 100)) : 0;
   const pctC = macroCarbs   > 0 ? Math.min(100, Math.round((totals.carbs   / macroCarbs)   * 100)) : 0;
   const pctF = macroFat     > 0 ? Math.min(100, Math.round((totals.fat     / macroFat)     * 100)) : 0;
@@ -954,16 +1008,6 @@ function saveAutoExport() {
   return dateStr;
 }
 
-function downloadExport(dateStr) {
-  const json = localStorage.getItem("kk_export_" + dateStr);
-  if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
-  const blob = new Blob([json], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "kk-calories-" + dateStr + ".json";
-  a.click();
-}
-
 function checkAutoExportPrompt() {
   const now = new Date();
   const hour = now.getHours();
@@ -987,7 +1031,7 @@ function showExportBanner() {
   banner.innerHTML = `
     <div style="flex:1">
       <div style="font-weight:700;font-size:15px;margin-bottom:2px">💾 Saglabāt datus?</div>
-      <div style="font-size:12px;color:#888">Ieteicams eksportēt katru vakaru</div>
+      <div style="font-size:12px;color:#888">Eksportē uz iCloud Drive</div>
     </div>
     <button onclick="doAutoExport()" style="background:#e8533a;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Eksportēt</button>
     <button onclick="dismissExportBanner()" style="background:#333;color:#aaa;border:none;border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer">✕</button>
@@ -995,9 +1039,9 @@ function showExportBanner() {
   document.body.appendChild(banner);
 }
 
-function doAutoExport() {
-  exportData();
+async function doAutoExport() {
   dismissExportBanner();
+  await exportData();
 }
 
 function dismissExportBanner() {
@@ -1037,7 +1081,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.7");
+  navigator.serviceWorker.register("service-worker.js?v=10.8");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
