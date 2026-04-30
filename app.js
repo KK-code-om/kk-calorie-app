@@ -115,14 +115,10 @@ function editFood(id) {
   const foods = getFoods();
   const f = foods.find(x => String(x.id) === String(id));
   if (!f) return;
-
-  // Extract grams from name if product-based (e.g. "Banāns 125g")
   const match = f.name.match(/^(.+?)\s+(\d+(?:\.\d+)?)g$/);
   const currentGrams = match ? parseFloat(match[2]) : null;
   const baseName = match ? match[1] : null;
-
   if (!match) {
-    // Manual entry — edit kcal directly
     const newKcal = prompt("Jauna kcal vērtība:", f.kcal);
     if (newKcal === null) return;
     f.kcal = num(newKcal);
@@ -130,13 +126,10 @@ function editFood(id) {
     renderOverview(); renderFoodList();
     return;
   }
-
   const newGrams = prompt(`Jauns svars gramos (bija ${currentGrams}g):`, currentGrams);
   if (newGrams === null) return;
   const g = num(newGrams);
   if (!g || g <= 0) return alert("Nederīgs svars.");
-
-  // Find product in DB by base name
   const p = getProducts().find(x => x.name.toLowerCase() === baseName.toLowerCase());
   if (p) {
     const factor = g / 100;
@@ -146,7 +139,6 @@ function editFood(id) {
     f.carbs = +(num(p.carbs) * factor).toFixed(1);
     f.fat = +(num(p.fat) * factor).toFixed(1);
   } else {
-    // Scale proportionally from current
     const scale = g / currentGrams;
     f.name = `${baseName} ${g}g`;
     f.kcal = Math.round(num(f.kcal) * scale);
@@ -154,7 +146,6 @@ function editFood(id) {
     f.carbs = +(num(f.carbs) * scale).toFixed(1);
     f.fat = +(num(f.fat) * scale).toFixed(1);
   }
-
   saveFoods(foods);
   renderOverview(); renderFoodList();
 }
@@ -194,23 +185,17 @@ function editProduct(id) {
   const products = getProducts();
   const p = products.find(x => String(x.id) === String(id));
   if (!p) return;
-
-  // Fill the add-product form with existing data
   document.getElementById("pName").value = p.name;
   document.getElementById("pKcal").value = p.kcal;
   document.getElementById("pProtein").value = p.protein;
   document.getElementById("pCarbs").value = p.carbs;
   document.getElementById("pFat").value = p.fat;
-
-  // Change save button to update mode
   const saveBtn = document.getElementById("saveProductBtn");
   if (saveBtn) {
     saveBtn.textContent = "Atjaunināt produktu";
     saveBtn.dataset.editId = id;
     saveBtn.onclick = () => updateProduct(id);
   }
-
-  // Scroll to top of products screen
   window.scrollTo(0, 0);
 }
 
@@ -220,7 +205,6 @@ function updateProduct(id) {
   const products = getProducts();
   const idx = products.findIndex(p => String(p.id) === String(id));
   if (idx < 0) return alert("Produkts nav atrasts.");
-
   products[idx] = {
     ...products[idx],
     name,
@@ -229,18 +213,14 @@ function updateProduct(id) {
     carbs: num(document.getElementById("pCarbs").value),
     fat: num(document.getElementById("pFat").value)
   };
-
   saveProducts(products);
   ["pName","pKcal","pProtein","pCarbs","pFat"].forEach(id => document.getElementById(id).value = "");
-
-  // Reset save button
   const saveBtn = document.getElementById("saveProductBtn");
   if (saveBtn) {
     saveBtn.textContent = "Saglabāt produktu";
     saveBtn.onclick = saveProduct;
     delete saveBtn.dataset.editId;
   }
-
   renderProducts();
   renderProductDatalist();
   alert("Produkts atjaunināts.");
@@ -251,7 +231,6 @@ let pickerProducts = [];
 
 function renderProductDatalist() {
   pickerProducts = getProducts();
-  // Pre-populate both dropdowns empty (shown on focus/type)
   ["portionDropdown","rDropdown"].forEach(id => {
     const dd = document.getElementById(id);
     if (dd) dd.innerHTML = "";
@@ -273,7 +252,6 @@ function pickerFilter(inputId, dropdownId) {
   const input = document.getElementById(inputId);
   const dd = document.getElementById(dropdownId);
   if (!input || !dd) return;
-
   const q = input.value.toLowerCase().trim();
   const products = getProducts();
   let filtered;
@@ -284,37 +262,24 @@ function pickerFilter(inputId, dropdownId) {
   } else {
     filtered = products.slice(0, 200);
   }
-
   dd.innerHTML = "";
-
-  if (!filtered.length) {
-    dd.classList.remove("open");
-    return;
-  }
-
+  if (!filtered.length) { dd.classList.remove("open"); return; }
   filtered.forEach(p => {
     const item = document.createElement("div");
     item.className = "picker-item";
     item.innerHTML = `${p.name}<small>${num(p.kcal)} kcal / 100g · P ${num(p.protein)} · O ${num(p.carbs)} · T ${num(p.fat)}</small>`;
-    item.addEventListener("mousedown", e => {
-      e.preventDefault();
-      input.value = p.name;
-      dd.classList.remove("open");
-    });
+    item.addEventListener("mousedown", e => { e.preventDefault(); input.value = p.name; dd.classList.remove("open"); });
     let touchStartY = 0;
-    item.addEventListener("touchstart", e => {
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
+    item.addEventListener("touchstart", e => { touchStartY = e.touches[0].clientY; }, { passive: true });
     item.addEventListener("touchend", e => {
       const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-      if (dy > 8) return; // scroll — ignore
+      if (dy > 8) return;
       e.preventDefault();
       input.value = p.name;
       dd.classList.remove("open");
     }, { passive: false });
     dd.appendChild(item);
   });
-
   dd.classList.add("open");
 }
 
@@ -323,7 +288,6 @@ function pickerClose(dropdownId) {
   if (dd) dd.classList.remove("open");
 }
 
-// Close dropdowns on outside click/touch
 document.addEventListener("click", e => {
   const dropMap = {
     "portionDropdown": "portionFoodSearch",
@@ -332,9 +296,7 @@ document.addEventListener("click", e => {
   };
   Object.entries(dropMap).forEach(([ddId, inputId]) => {
     const dd = document.getElementById(ddId);
-    if (dd && !dd.contains(e.target) && e.target.id !== inputId) {
-      dd.classList.remove("open");
-    }
+    if (dd && !dd.contains(e.target) && e.target.id !== inputId) dd.classList.remove("open");
   });
 });
 
@@ -459,18 +421,19 @@ function saveWeight() {
 }
 
 function saveSettings() {
-  const s = {
-    kcal: num(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal,
-    protein: num(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein,
-    carbs: num(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs,
-    fat: num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat,
-    water: num(document.getElementById("setWater").value) || DEFAULT_SETTINGS.water
-  };
-  saveSettingsData(s); alert("Saglabāts."); renderSettings(); renderOverview();
+  const s = getSettings();
+  s.kcal = num(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal;
+  s.protein = num(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein;
+  s.carbs = num(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs;
+  s.fat = num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat;
+  saveSettingsData(s);
+  alert("Saglabāts.");
+  renderSettings();
+  renderOverview();
 }
 
 function exportData() {
-  saveAutoExport(); // save to rotation
+  saveAutoExport();
   const data = collectExportData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -511,23 +474,6 @@ function updateGauge(pct) {
   arc.style.strokeDashoffset = 251.3 - (251.3 * Math.min(pct, 100) / 100);
 }
 
-/* ===== WATER TRACKING ===== */
-function getWater(date = currentDate) {
-  return parseInt(localStorage.getItem("water_" + date) || "0", 10);
-}
-function saveWater(ml, date = currentDate) {
-  localStorage.setItem("water_" + date, String(ml));
-}
-function addWater(ml) {
-  saveWater(getWater() + ml);
-  renderOverview();
-}
-function resetWater() {
-  saveWater(0);
-  renderOverview();
-}
-/* ===== END WATER ===== */
-
 function renderOverview() {
   const foods = getFoods();
   const s = getSettings();
@@ -535,6 +481,7 @@ function renderOverview() {
   updateDayLabel();
   document.getElementById("datePicker").value = currentDate;
   document.getElementById("dateLabel").textContent = currentDate;
+
   // TDEE calculation
   const bmr = calcBmr(s);
   const activityKcal = getActivityKcal();
@@ -551,32 +498,38 @@ function renderOverview() {
   const targetEl = document.getElementById("targetDisplay");
   if (targetEl) targetEl.textContent = activityKcal > 0 ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
 
+  // Auto macro targets from dailyTarget
+  const macroProtein = activityKcal > 0 ? Math.round(dailyTarget * 0.25 / 4) : s.protein;
+  const macroCarbs   = activityKcal > 0 ? Math.round(dailyTarget * 0.40 / 4) : s.carbs;
+  const macroFat     = activityKcal > 0 ? Math.round(dailyTarget * 0.35 / 9) : s.fat;
 
+  // Macro mini tiles — value + target
   document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
+  const kcalTargetEl = document.getElementById("kcalTarget");
+  if (kcalTargetEl) kcalTargetEl.textContent = `no ${dailyTarget} kcal`;
+
   document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
+  const proteinTargetEl = document.getElementById("proteinTarget");
+  if (proteinTargetEl) proteinTargetEl.textContent = `no ${macroProtein} g proteīns`;
+
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
+  const carbsTargetEl = document.getElementById("carbsTarget");
+  if (carbsTargetEl) carbsTargetEl.textContent = `no ${macroCarbs} g ogļhidr.`;
+
   document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
-  updateGauge(Math.round((totals.kcal / dailyTarget) * 100));
+  const fatTargetEl = document.getElementById("fatTarget");
+  if (fatTargetEl) fatTargetEl.textContent = `no ${macroFat} g tauki`;
 
   // Progress bars
-  const pctP = s.protein > 0 ? Math.min(100, Math.round((totals.protein / s.protein) * 100)) : 0;
-  const pctC = s.carbs > 0 ? Math.min(100, Math.round((totals.carbs / s.carbs) * 100)) : 0;
-  const pctF = s.fat > 0 ? Math.min(100, Math.round((totals.fat / s.fat) * 100)) : 0;
+  const pctP = macroProtein > 0 ? Math.min(100, Math.round((totals.protein / macroProtein) * 100)) : 0;
+  const pctC = macroCarbs   > 0 ? Math.min(100, Math.round((totals.carbs   / macroCarbs)   * 100)) : 0;
+  const pctF = macroFat     > 0 ? Math.min(100, Math.round((totals.fat     / macroFat)     * 100)) : 0;
   const setBar = (id, pct) => { const el = document.getElementById(id); if (el) el.style.width = pct + "%"; };
   setBar("barProtein", pctP);
   setBar("barCarbs", pctC);
   setBar("barFat", pctF);
 
-  // Water
-  const water = getWater();
-  const waterTarget = s.water || 2000;
-  const pctW = Math.min(100, Math.round((water / waterTarget) * 100));
-  const waterEl = document.getElementById("waterMini");
-  if (waterEl) waterEl.textContent = water + " ml";
-  setBar("barWater", pctW);
-  const waterRemEl = document.getElementById("waterRemain");
-  if (waterRemEl) waterRemEl.textContent = "Ūdens: " + water + " / " + waterTarget + " ml";
-
+  updateGauge(Math.round((totals.kcal / dailyTarget) * 100));
   renderMealSummary();
 }
 
@@ -606,6 +559,12 @@ function renderMealSummary() {
 
 function renderAnalytics() {
   const s = getSettings();
+  const activityKcal = getActivityKcal();
+  const bmr = calcBmr(s);
+  const deficit = s.deficit || 700;
+  const dailyTarget = activityKcal > 0 ? (bmr + activityKcal - deficit) : s.kcal;
+  const macroProtein = activityKcal > 0 ? Math.round(dailyTarget * 0.25 / 4) : s.protein;
+
   let total7 = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(currentDate); d.setDate(d.getDate() - i);
@@ -614,8 +573,8 @@ function renderAnalytics() {
   const avg = Math.round(total7 / 7);
   const todayProtein = getFoods().reduce((a,f) => a+num(f.protein), 0);
   const el7 = document.getElementById("avgKcal7"); if (el7) el7.textContent = avg;
-  const elP = document.getElementById("proteinCompliance"); if (elP) elP.textContent = Math.round((todayProtein/s.protein)*100) + "%";
-  const elD = document.getElementById("deficitCalc"); if (elD) elD.textContent = Math.round(s.kcal - avg);
+  const elP = document.getElementById("proteinCompliance"); if (elP) elP.textContent = Math.round((todayProtein / macroProtein) * 100) + "%";
+  const elD = document.getElementById("deficitCalc"); if (elD) elD.textContent = Math.round(dailyTarget - avg);
   const weights = (JSON.parse(localStorage.getItem("weights"))||[]).filter(w=>w&&w.date&&num(w.weight)).sort((a,b)=>a.date.localeCompare(b.date));
   const trendEl = document.getElementById("weightTrend");
   if (trendEl) {
@@ -749,7 +708,6 @@ function renderWeight() {
 }
 
 function calcBmr(s, weight) {
-  // Mifflin-St Jeor
   const w = weight || getLastWeight() || 80;
   const h = s.bmrHeight || 178;
   const a = s.bmrAge || 40;
@@ -760,6 +718,7 @@ function calcBmr(s, weight) {
 function getActivityKcal(date = currentDate) {
   return parseInt(localStorage.getItem("activity_" + date) || "0", 10);
 }
+
 function saveActivityKcal() {
   const input = document.getElementById("activityKcal");
   const val = num(input ? input.value : 0);
@@ -787,7 +746,6 @@ function renderSettings() {
   document.getElementById("setProtein").value = s.protein;
   document.getElementById("setCarbs").value = s.carbs;
   document.getElementById("setFat").value = s.fat;
-  document.getElementById("setWater").value = s.water;
 
   const genderEl = document.getElementById("setBmrGender");
   if (genderEl) genderEl.value = s.bmrGender || "male";
@@ -802,7 +760,6 @@ function renderSettings() {
   const bmrEl = document.getElementById("bmrResult");
   if (bmrEl) bmrEl.textContent = `BMR: ${bmr} kcal/dienā (Mifflin-St Jeor)`;
 
-  // Activity field
   const actInput = document.getElementById("activityKcal");
   const actStatus = document.getElementById("activityStatus");
   const storedActivity = getActivityKcal();
@@ -873,7 +830,6 @@ async function lookupBarcode() {
   } catch { status.textContent = "Kļūda."; }
 }
 
-
 /* ===== RECIPE DETAIL & EDIT ===== */
 let rdRecipeId = null;
 let rdIngredients = [];
@@ -883,11 +839,9 @@ function openRecipeDetail(id) {
   if (!r) return;
   rdRecipeId = id;
   rdIngredients = r.ingredients.map(i => ({ ...i }));
-
   document.getElementById("rdTitle").textContent = r.name;
   document.getElementById("rdName").value = r.name;
   document.getElementById("rdYield").value = r.yieldGrams;
-
   renderRdSummary(r);
   renderRdIngredients();
   renderRdIngredientEdit();
@@ -970,8 +924,6 @@ function rdSaveRecipe() {
   alert("Recepte saglabāta.");
   showTab("recipes");
 }
-/* ===== END RECIPE DETAIL ===== */
-
 
 /* ===== AUTO EXPORT SYSTEM ===== */
 const MAX_STORED_EXPORTS = 5;
@@ -979,7 +931,7 @@ const MAX_STORED_EXPORTS = 5;
 function collectExportData() {
   const data = {};
   Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_") || k.startsWith("water_"))
+    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_"))
       data[k] = localStorage.getItem(k);
   });
   return data;
@@ -989,22 +941,13 @@ function saveAutoExport() {
   const data = collectExportData();
   const dateStr = new Date().toISOString().slice(0, 10);
   const json = JSON.stringify(data);
-
-  // Load existing rotation
   let rotation = JSON.parse(localStorage.getItem("kk_export_rotation") || "[]");
-
-  // Remove existing entry for same date
   rotation = rotation.filter(e => e.date !== dateStr);
-
-  // Add new entry
   rotation.push({ date: dateStr, ts: Date.now() });
-
-  // Keep only last 5
   if (rotation.length > MAX_STORED_EXPORTS) {
     const oldest = rotation.shift();
     localStorage.removeItem("kk_export_" + oldest.date);
   }
-
   localStorage.setItem("kk_export_" + dateStr, json);
   localStorage.setItem("kk_export_rotation", JSON.stringify(rotation));
   localStorage.setItem("kk_last_export_date", dateStr);
@@ -1027,11 +970,7 @@ function checkAutoExportPrompt() {
   const todayStr = now.toISOString().slice(0, 10);
   const lastExport = localStorage.getItem("kk_last_export_date") || "";
   const dismissed = localStorage.getItem("kk_export_dismissed_today") || "";
-
-  // Show between 21:00-23:59, only if not yet exported today and not dismissed today
-  if (hour >= 21 && lastExport !== todayStr && dismissed !== todayStr) {
-    showExportBanner();
-  }
+  if (hour >= 21 && lastExport !== todayStr && dismissed !== todayStr) showExportBanner();
 }
 
 function showExportBanner() {
@@ -1057,8 +996,6 @@ function showExportBanner() {
 }
 
 function doAutoExport() {
-  const dateStr = saveAutoExport();
-  // Also trigger download
   exportData();
   dismissExportBanner();
 }
@@ -1075,24 +1012,16 @@ function renderExportRotation() {
   if (!box) return;
   const rotation = JSON.parse(localStorage.getItem("kk_export_rotation") || "[]");
   box.innerHTML = "";
-  if (!rotation.length) {
-    box.innerHTML = '<p class="muted-text">Nav saglabātu eksportu.</p>';
-    return;
-  }
+  if (!rotation.length) { box.innerHTML = '<p class="muted-text">Nav saglabātu eksportu.</p>'; return; }
   [...rotation].reverse().forEach(e => {
-    const row = document.createElement("div");
-    row.className = "weight-row";
-    const label = document.createElement("span");
-    label.textContent = e.date;
-    const btn = document.createElement("button");
-    btn.textContent = "⬇ Lejupielādēt";
+    const row = document.createElement("div"); row.className = "weight-row";
+    const label = document.createElement("span"); label.textContent = e.date;
+    const btn = document.createElement("button"); btn.textContent = "⬇ Lejupielādēt";
     btn.style.cssText = "background:#f0ede8;color:#1a1a1a;padding:7px 12px;font-size:13px;border-radius:10px;";
     btn.addEventListener("click", () => downloadExport(e.date));
-    row.append(label, btn);
-    box.appendChild(row);
+    row.append(label, btn); box.appendChild(row);
   });
 }
-/* ===== END AUTO EXPORT ===== */
 
 function renderAll() {
   ensureStarterProducts();
@@ -1108,12 +1037,11 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.6");
+  navigator.serviceWorker.register("service-worker.js?v=10.7");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   renderAll();
-  // Check auto-export every minute
   checkAutoExportPrompt();
   setInterval(checkAutoExportPrompt, 60000);
 });
