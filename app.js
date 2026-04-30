@@ -462,16 +462,19 @@ async function exportData() {
   renderExportRotation();
 }
 
-function downloadExport(dateStr) {
+async function downloadExport(dateStr) {
   const json = localStorage.getItem("kk_export_" + dateStr);
   if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
   const filename = "kk-calories-" + dateStr + ".json";
   if (navigator.canShare) {
-    const file = new File([json], filename, { type: "application/json" });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: filename })
-        .catch(e => { if (e.name !== "AbortError") console.log("Share error:", e); });
-      return;
+    try {
+      const file = new File([json], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") return;
     }
   }
   const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
