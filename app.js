@@ -433,12 +433,30 @@ function saveSettings() {
 }
 
 /* ===== EXPORT — iOS Share Sheet + fallback ===== */
-function exportData() {
+async function exportData() {
   saveAutoExport();
   const data = collectExportData();
   const json = JSON.stringify(data, null, 2);
+  const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
+  if (navigator.canShare) {
+    try {
+      const file = new File([json], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        renderExportRotation();
+        return;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") { renderExportRotation(); return; }
+    }
+  }
   const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
-  window.open(dataUri, "_blank");
+  const a = document.createElement("a");
+  a.href = dataUri;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   renderExportRotation();
 }
 
