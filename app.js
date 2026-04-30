@@ -437,27 +437,8 @@ function exportData() {
   saveAutoExport();
   const data = collectExportData();
   const json = JSON.stringify(data, null, 2);
-  const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
-
-  // iOS PWA: Web Share API — sinhroni, lai saglabātu user gesture
-  if (navigator.canShare) {
-    const file = new File([json], filename, { type: "application/json" });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: filename })
-        .catch(e => { if (e.name !== "AbortError") console.log("Share error:", e); });
-      renderExportRotation();
-      return;
-    }
-  }
-
-  // Fallback: data URI
   const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
-  const a = document.createElement("a");
-  a.href = dataUri;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  window.open(dataUri, "_blank");
   renderExportRotation();
 }
 
