@@ -433,51 +433,53 @@ function saveSettings() {
 }
 
 /* ===== EXPORT — iOS Share Sheet + fallback ===== */
-async function shareJsonFile(json, filename) {
-  // iOS PWA: Web Share API ar File objektu — atver Share Sheet → "Save to Files" → iCloud Drive
-  if (navigator.canShare) {
-    try {
-      const file = new File([json], filename, { type: "application/json" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename });
-        return true;
-      }
-    } catch(e) {
-      if (e.name === "AbortError") return true; // lietotājs aizvēra share sheet — OK
-    }
-  }
-  // Fallback: data URI (strādā uz Mac Safari un vecākiem iOS)
-  try {
-    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
-    const a = document.createElement("a");
-    a.href = dataUri;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return true;
-  } catch(e) {
-    // Pēdējais fallback: jauns logs
-    const blob = new Blob([json], { type: "application/json" });
-    window.open(URL.createObjectURL(blob), "_blank");
-    return true;
-  }
-}
-
-async function exportData() {
+function exportData() {
   saveAutoExport();
   const data = collectExportData();
   const json = JSON.stringify(data, null, 2);
   const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
-  await shareJsonFile(json, filename);
+
+  // iOS PWA: Web Share API — sinhroni, lai saglabātu user gesture
+  if (navigator.canShare) {
+    const file = new File([json], filename, { type: "application/json" });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: filename })
+        .catch(e => { if (e.name !== "AbortError") console.log("Share error:", e); });
+      renderExportRotation();
+      return;
+    }
+  }
+
+  // Fallback: data URI
+  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
+  const a = document.createElement("a");
+  a.href = dataUri;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   renderExportRotation();
 }
 
-async function downloadExport(dateStr) {
+function downloadExport(dateStr) {
   const json = localStorage.getItem("kk_export_" + dateStr);
   if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
   const filename = "kk-calories-" + dateStr + ".json";
-  await shareJsonFile(json, filename);
+  if (navigator.canShare) {
+    const file = new File([json], filename, { type: "application/json" });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: filename })
+        .catch(e => { if (e.name !== "AbortError") console.log("Share error:", e); });
+      return;
+    }
+  }
+  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
+  const a = document.createElement("a");
+  a.href = dataUri;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 /* ===== END EXPORT ===== */
 
