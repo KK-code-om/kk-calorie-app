@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10.10" />
+  <link rel="stylesheet" href="style.css?v=10.11" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -36,14 +36,14 @@
           </svg>
           <div class="gauge-center">
             <span class="gauge-num" id="totalKcal">0</span>
-            <span class="gauge-unit">/ <span id="targetKcal">1900</span> kcal</span>
+            <span class="gauge-unit">/ <span id="targetKcal">—</span> kcal</span>
           </div>
         </div>
-        <p class="gauge-remain">Atlikums: <b id="remainingKcal">1900</b> kcal</p>
+        <p class="gauge-remain">Atlikums: <b id="remainingKcal">—</b> kcal</p>
         <div class="tdee-row">
           <div class="tdee-info">
             <span id="tdeeDisplay">BMR: —</span>
-            <span id="targetDisplay">Mērķis: — kcal</span>
+            <span id="targetDisplay">Ievadi aktivitāti</span>
           </div>
         </div>
       </div>
@@ -58,21 +58,21 @@
           <span class="tile-icon">💪</span>
           <span class="macro-label">Proteīns</span>
           <b id="proteinMini">0 g</b>
-          <small id="proteinTarget" class="macro-target">proteīns</small>
+          <small id="proteinTarget" class="macro-target">—</small>
           <div class="macro-bar-wrap"><div class="macro-bar bar-protein" id="barProtein"></div></div>
         </div>
         <div class="macro-tile tile-grain">
           <span class="tile-icon">🌾</span>
           <span class="macro-label">Ogļhidrāti</span>
           <b id="carbsMini">0 g</b>
-          <small id="carbsTarget" class="macro-target">ogļhidr.</small>
+          <small id="carbsTarget" class="macro-target">—</small>
           <div class="macro-bar-wrap"><div class="macro-bar bar-carbs" id="barCarbs"></div></div>
         </div>
         <div class="macro-tile tile-fat">
           <span class="tile-icon">🧈</span>
           <span class="macro-label">Tauki</span>
           <b id="fatMini">0 g</b>
-          <small id="fatTarget" class="macro-target">tauki</small>
+          <small id="fatTarget" class="macro-target">—</small>
           <div class="macro-bar-wrap"><div class="macro-bar bar-fat" id="barFat"></div></div>
         </div>
       </div>
@@ -249,8 +249,8 @@
       </header>
       <div class="analytics-grid-full">
         <div class="analytics-tile-big"><b id="avgKcal7">0</b><small>7 dienu vidējais kcal</small></div>
-        <div class="analytics-tile-big"><b id="proteinCompliance">0%</b><small>Proteīna mērķis</small></div>
-        <div class="analytics-tile-big"><b id="deficitCalc">0</b><small>Deficīts kcal/dienā</small></div>
+        <div class="analytics-tile-big"><b id="proteinCompliance">—</b><small>Proteīna mērķis</small></div>
+        <div class="analytics-tile-big"><b id="deficitCalc">—</b><small>Deficīts kcal/dienā</small></div>
         <div class="analytics-tile-big"><b id="weightTrend">—</b><small>Svara trends</small></div>
       </div>
       <div class="section-card" style="margin-top:14px">
@@ -313,20 +313,6 @@
       </div>
 
       <div class="section-card">
-        <h2>Makro mērķi (fallback)</h2>
-        <p class="muted-text small-text">Tiek izmantoti tikai tad, ja aktivitāte nav ievadīta.</p>
-        <div class="field-row">
-          <input id="setKcal" type="number" placeholder="kcal" class="field" />
-          <input id="setProtein" type="number" placeholder="Proteīns g" class="field" />
-        </div>
-        <div class="field-row">
-          <input id="setCarbs" type="number" placeholder="Ogļhidrāti g" class="field" />
-          <input id="setFat" type="number" placeholder="Tauki g" class="field" />
-        </div>
-        <button class="btn-primary full-width" onclick="saveSettings()">Saglabāt mērķus</button>
-      </div>
-
-      <div class="section-card">
         <h2>Datu eksports</h2>
         <div class="field-row">
           <button class="btn-secondary" onclick="exportData()">Export JSON</button>
@@ -345,6 +331,6 @@
     </section>
 
   </main>
-  <script src="app.js?v=10.10"></script>
+  <script src="app.js?v=10.11"></script>
 </body>
 </html>

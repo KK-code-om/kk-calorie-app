@@ -1,4 +1,4 @@
-const DEFAULT_SETTINGS = { kcal: 1900, protein: 130, carbs: 190, fat: 70, water: 2000, bmrGender: 'male', bmrAge: 40, bmrHeight: 178, deficit: 700 };
+const DEFAULT_SETTINGS = { water: 2000, bmrGender: 'male', bmrAge: 40, bmrHeight: 178, deficit: 700 };
 const STARTER_PRODUCTS = [
   { id: 1001, name: "Banāns", kcal: 89, protein: 1.1, carbs: 23.0, fat: 0.3, favorite: false },
   { id: 1002, name: "Vārīta ola", kcal: 155, protein: 13.0, carbs: 1.1, fat: 11.0, favorite: false },
@@ -420,18 +420,6 @@ function saveWeight() {
   renderOverview();
 }
 
-function saveSettings() {
-  const s = getSettings();
-  s.kcal = num(document.getElementById("setKcal").value) || DEFAULT_SETTINGS.kcal;
-  s.protein = num(document.getElementById("setProtein").value) || DEFAULT_SETTINGS.protein;
-  s.carbs = num(document.getElementById("setCarbs").value) || DEFAULT_SETTINGS.carbs;
-  s.fat = num(document.getElementById("setFat").value) || DEFAULT_SETTINGS.fat;
-  saveSettingsData(s);
-  alert("Saglabāts.");
-  renderSettings();
-  renderOverview();
-}
-
 /* ===== EXPORT — iOS Share Sheet + fallback ===== */
 async function exportData() {
   saveAutoExport();
@@ -546,38 +534,39 @@ function renderOverview() {
 
   const bmr = calcBmr(s);
   const activityKcal = getActivityKcal();
+  const hasActivity = activityKcal > 0;
   const tdee = bmr + activityKcal;
   const deficit = s.deficit || 700;
-  const dailyTarget = activityKcal > 0 ? tdee - deficit : s.kcal;
+  const dailyTarget = hasActivity ? tdee - deficit : 0;
 
   document.getElementById("totalKcal").textContent = Math.round(totals.kcal);
-  document.getElementById("targetKcal").textContent = dailyTarget;
-  document.getElementById("remainingKcal").textContent = Math.round(dailyTarget - totals.kcal);
+  document.getElementById("targetKcal").textContent = hasActivity ? dailyTarget : "—";
+  document.getElementById("remainingKcal").textContent = hasActivity ? Math.round(dailyTarget - totals.kcal) : "—";
 
   const tdeeEl = document.getElementById("tdeeDisplay");
-  if (tdeeEl) tdeeEl.textContent = activityKcal > 0 ? `BMR ${bmr} + ${activityKcal} = TDEE ${tdee}` : `BMR: ${bmr} kcal`;
+  if (tdeeEl) tdeeEl.textContent = hasActivity ? `BMR ${bmr} + ${activityKcal} = TDEE ${tdee}` : `BMR: ${bmr} kcal`;
   const targetEl = document.getElementById("targetDisplay");
-  if (targetEl) targetEl.textContent = activityKcal > 0 ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
+  if (targetEl) targetEl.textContent = hasActivity ? `Mērķis: ${dailyTarget} kcal (−${deficit})` : `Ievadi aktivitāti`;
 
-  const macroProtein = activityKcal > 0 ? Math.round(dailyTarget * 0.25 / 4) : s.protein;
-  const macroCarbs   = activityKcal > 0 ? Math.round(dailyTarget * 0.40 / 4) : s.carbs;
-  const macroFat     = activityKcal > 0 ? Math.round(dailyTarget * 0.35 / 9) : s.fat;
+  const macroProtein = hasActivity ? Math.round(dailyTarget * 0.25 / 4) : 0;
+  const macroCarbs   = hasActivity ? Math.round(dailyTarget * 0.40 / 4) : 0;
+  const macroFat     = hasActivity ? Math.round(dailyTarget * 0.35 / 9) : 0;
 
   document.getElementById("kcalMini").textContent = Math.round(totals.kcal);
   const kcalTargetEl = document.getElementById("kcalTarget");
-  if (kcalTargetEl) kcalTargetEl.textContent = `no ${dailyTarget} kcal`;
+  if (kcalTargetEl) kcalTargetEl.textContent = hasActivity ? `no ${dailyTarget} kcal` : `— kcal`;
 
   document.getElementById("proteinMini").textContent = totals.protein.toFixed(1) + " g";
   const proteinTargetEl = document.getElementById("proteinTarget");
-  if (proteinTargetEl) proteinTargetEl.textContent = `no ${macroProtein} g proteīns`;
+  if (proteinTargetEl) proteinTargetEl.textContent = hasActivity ? `no ${macroProtein} g proteīns` : `—`;
 
   document.getElementById("carbsMini").textContent = totals.carbs.toFixed(1) + " g";
   const carbsTargetEl = document.getElementById("carbsTarget");
-  if (carbsTargetEl) carbsTargetEl.textContent = `no ${macroCarbs} g ogļhidr.`;
+  if (carbsTargetEl) carbsTargetEl.textContent = hasActivity ? `no ${macroCarbs} g ogļhidr.` : `—`;
 
   document.getElementById("fatMini").textContent = totals.fat.toFixed(1) + " g";
   const fatTargetEl = document.getElementById("fatTarget");
-  if (fatTargetEl) fatTargetEl.textContent = `no ${macroFat} g tauki`;
+  if (fatTargetEl) fatTargetEl.textContent = hasActivity ? `no ${macroFat} g tauki` : `—`;
 
   const pctP = macroProtein > 0 ? Math.min(100, Math.round((totals.protein / macroProtein) * 100)) : 0;
   const pctC = macroCarbs   > 0 ? Math.min(100, Math.round((totals.carbs   / macroCarbs)   * 100)) : 0;
@@ -587,7 +576,7 @@ function renderOverview() {
   setBar("barCarbs", pctC);
   setBar("barFat", pctF);
 
-  updateGauge(Math.round((totals.kcal / dailyTarget) * 100));
+  updateGauge(hasActivity ? Math.round((totals.kcal / dailyTarget) * 100) : 0);
   renderMealSummary();
 }
 
@@ -620,8 +609,9 @@ function renderAnalytics() {
   const activityKcal = getActivityKcal();
   const bmr = calcBmr(s);
   const deficit = s.deficit || 700;
-  const dailyTarget = activityKcal > 0 ? (bmr + activityKcal - deficit) : s.kcal;
-  const macroProtein = activityKcal > 0 ? Math.round(dailyTarget * 0.25 / 4) : s.protein;
+  const hasActivity = activityKcal > 0;
+  const dailyTarget = hasActivity ? (bmr + activityKcal - deficit) : 0;
+  const macroProtein = hasActivity ? Math.round(dailyTarget * 0.25 / 4) : 0;
 
   let total7 = 0;
   for (let i = 0; i < 7; i++) {
@@ -631,8 +621,10 @@ function renderAnalytics() {
   const avg = Math.round(total7 / 7);
   const todayProtein = getFoods().reduce((a,f) => a+num(f.protein), 0);
   const el7 = document.getElementById("avgKcal7"); if (el7) el7.textContent = avg;
-  const elP = document.getElementById("proteinCompliance"); if (elP) elP.textContent = Math.round((todayProtein / macroProtein) * 100) + "%";
-  const elD = document.getElementById("deficitCalc"); if (elD) elD.textContent = Math.round(dailyTarget - avg);
+  const elP = document.getElementById("proteinCompliance");
+  if (elP) elP.textContent = (hasActivity && macroProtein > 0) ? Math.round((todayProtein / macroProtein) * 100) + "%" : "—";
+  const elD = document.getElementById("deficitCalc");
+  if (elD) elD.textContent = hasActivity ? Math.round(dailyTarget - avg) : "—";
   const weights = (JSON.parse(localStorage.getItem("weights"))||[]).filter(w=>w&&w.date&&num(w.weight)).sort((a,b)=>a.date.localeCompare(b.date));
   const trendEl = document.getElementById("weightTrend");
   if (trendEl) {
@@ -800,10 +792,6 @@ function saveBmrSettings() {
 
 function renderSettings() {
   const s = getSettings();
-  document.getElementById("setKcal").value = s.kcal;
-  document.getElementById("setProtein").value = s.protein;
-  document.getElementById("setCarbs").value = s.carbs;
-  document.getElementById("setFat").value = s.fat;
 
   const genderEl = document.getElementById("setBmrGender");
   if (genderEl) genderEl.value = s.bmrGender || "male";
@@ -828,7 +816,7 @@ function renderSettings() {
       const deficit = s.deficit || 700;
       actStatus.textContent = `TDEE: ${bmr} + ${storedActivity} = ${tdee} kcal → Mērķis: ${tdee - deficit} kcal`;
     } else {
-      actStatus.textContent = "Nav ievadīts — tiek izmantots manuālais mērķis";
+      actStatus.textContent = "Nav ievadīts — ievadi vakardienas aktivitāti";
     }
   }
 
@@ -1085,7 +1073,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.10");
+  navigator.serviceWorker.register("service-worker.js?v=10.11");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
