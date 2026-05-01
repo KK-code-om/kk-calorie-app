@@ -434,7 +434,7 @@ function saveSettings() {
 
 /* ===== EXPORT — iOS Share Sheet + fallback ===== */
 async function exportData() {
-  // Sagatavo datus PIRMS share — bet share jāizsauc uzreiz no user gesture
+  saveAutoExport();
   const data = collectExportData();
   const json = JSON.stringify(data, null, 2);
   const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
@@ -443,15 +443,13 @@ async function exportData() {
       const file = new File([json], filename, { type: "application/json" });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: filename });
-        saveAutoExport();
         renderExportRotation();
         return;
       }
     } catch(e) {
-      if (e.name === "AbortError") { saveAutoExport(); renderExportRotation(); return; }
+      if (e.name === "AbortError") { renderExportRotation(); return; }
     }
   }
-  saveAutoExport();
   const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
   const a = document.createElement("a");
   a.href = dataUri;
@@ -986,7 +984,7 @@ function rdSaveRecipe() {
 }
 
 /* ===== AUTO EXPORT SYSTEM ===== */
-const MAX_STORED_EXPORTS = 5;
+const MAX_STORED_EXPORTS = 3;
 
 function collectExportData() {
   const data = {};
@@ -1087,7 +1085,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.8");
+  navigator.serviceWorker.register("service-worker.js?v=10.10");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
