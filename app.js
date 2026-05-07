@@ -306,7 +306,40 @@ function importProductsCSV() {
   function setStatus(msg) { if (status) status.textContent = msg; }
   const raw = box.value.trim();
   if (!raw) return alert("CSV lauks ir tukšs.");
-  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+
+  // Split foods and products blocks
+  const parts = raw.split(/###PRODUCTS###/);
+  const productsPart = parts.length > 1 ? parts[1].trim() : null;
+
+  if (productsPart) {
+    const pLines = productsPart.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    if (pLines.length >= 2) {
+      const header = pLines[0].split(",").map(x => x.trim().toLowerCase());
+      const idx = { name: header.indexOf("name"), kcal: header.indexOf("kcal"), protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat") };
+      if (idx.name >= 0 && idx.kcal >= 0) {
+        const products = getProducts();
+        let added = 0, updated = 0;
+        pLines.slice(1).forEach(line => {
+          const c = line.split(",").map(x => x.trim());
+          const name = c[idx.name];
+          if (!name) return;
+          const item = { name, kcal: num(c[idx.kcal]), protein: num(c[idx.protein]), carbs: num(c[idx.carbs]), fat: num(c[idx.fat]) };
+          const found = products.findIndex(p => String(p.name||"").toLowerCase().trim() === name.toLowerCase().trim());
+          if (found >= 0) { products[found] = { ...products[found], ...item }; updated++; }
+          else { products.push({ id: Date.now() + Math.floor(Math.random()*10000), ...item, favorite: false }); added++; }
+        });
+        saveProducts(products);
+        box.value = "";
+        const msg = `Produkti importēti. Pievienoti: ${added}, Atjaunoti: ${updated}`;
+        setStatus(msg); alert(msg);
+        renderProducts(); renderProductDatalist();
+        return;
+      }
+    }
+  }
+
+  // Normal products-only CSV
+  const lines = parts[0].trim().split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   if (lines.length < 2) return alert("CSV vajag header + produktus.");
   const header = lines[0].split(",").map(x => x.trim().toLowerCase());
   const idx = { name: header.indexOf("name"), kcal: header.indexOf("kcal"), protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat") };
@@ -499,7 +532,19 @@ async function exportCSV() {
     const date = k.replace("foods_", "");
     (JSON.parse(localStorage.getItem(k))||[]).forEach(f => rows.push([date, f.mealType||"", f.name, f.kcal, f.protein, f.carbs, f.fat]));
   });
-  const csv = rows.map(r => r.join(",")).join("\n");
+  let csv = rows.map(r => r.join(",")).join("\n");
+
+  // Append products block
+  const products = getProducts();
+  if (products.length) {
+    csv += "\n###PRODUCTS###\n";
+    csv += "name,kcal,protein,carbs,fat\n";
+    products.forEach(p => {
+      const name = String(p.name||"").replace(/,/g, ";");
+      csv += `${name},${p.kcal||0},${p.protein||0},${p.carbs||0},${p.fat||0}\n`;
+    });
+  }
+
   const filename = "kk-calories.csv";
   if (navigator.canShare) {
     try {
@@ -1025,7 +1070,7 @@ function showExportBanner() {
       <div style="font-weight:700;font-size:15px;margin-bottom:2px">💾 Saglabāt datus?</div>
       <div style="font-size:12px;color:#888">Eksportē uz iCloud Drive</div>
     </div>
-    <button onclick="doAutoExport()" style="background:#e8533a;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Eksportēt</button>
+    <button onclick="doAutoExport()" style="background:#e8533a;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Eksportēt CSV</button>
     <button onclick="dismissExportBanner()" style="background:#333;color:#aaa;border:none;border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;cursor:pointer">✕</button>
   `;
   document.body.appendChild(banner);
@@ -1033,7 +1078,7 @@ function showExportBanner() {
 
 async function doAutoExport() {
   dismissExportBanner();
-  await exportData();
+  await exportCSV();
 }
 
 function dismissExportBanner() {
@@ -1073,7 +1118,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.11");
+  navigator.serviceWorker.register("service-worker.js?v=10.12");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
