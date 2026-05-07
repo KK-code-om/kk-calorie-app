@@ -306,40 +306,7 @@ function importProductsCSV() {
   function setStatus(msg) { if (status) status.textContent = msg; }
   const raw = box.value.trim();
   if (!raw) return alert("CSV lauks ir tukšs.");
-
-  // Split foods and products blocks
-  const parts = raw.split(/###PRODUCTS###/);
-  const productsPart = parts.length > 1 ? parts[1].trim() : null;
-
-  if (productsPart) {
-    const pLines = productsPart.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
-    if (pLines.length >= 2) {
-      const header = pLines[0].split(",").map(x => x.trim().toLowerCase());
-      const idx = { name: header.indexOf("name"), kcal: header.indexOf("kcal"), protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat") };
-      if (idx.name >= 0 && idx.kcal >= 0) {
-        const products = getProducts();
-        let added = 0, updated = 0;
-        pLines.slice(1).forEach(line => {
-          const c = line.split(",").map(x => x.trim());
-          const name = c[idx.name];
-          if (!name) return;
-          const item = { name, kcal: num(c[idx.kcal]), protein: num(c[idx.protein]), carbs: num(c[idx.carbs]), fat: num(c[idx.fat]) };
-          const found = products.findIndex(p => String(p.name||"").toLowerCase().trim() === name.toLowerCase().trim());
-          if (found >= 0) { products[found] = { ...products[found], ...item }; updated++; }
-          else { products.push({ id: Date.now() + Math.floor(Math.random()*10000), ...item, favorite: false }); added++; }
-        });
-        saveProducts(products);
-        box.value = "";
-        const msg = `Produkti importēti. Pievienoti: ${added}, Atjaunoti: ${updated}`;
-        setStatus(msg); alert(msg);
-        renderProducts(); renderProductDatalist();
-        return;
-      }
-    }
-  }
-
-  // Normal products-only CSV
-  const lines = parts[0].trim().split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   if (lines.length < 2) return alert("CSV vajag header + produktus.");
   const header = lines[0].split(",").map(x => x.trim().toLowerCase());
   const idx = { name: header.indexOf("name"), kcal: header.indexOf("kcal"), protein: header.indexOf("protein"), carbs: header.indexOf("carbs"), fat: header.indexOf("fat") };
@@ -451,116 +418,6 @@ function saveWeight() {
   renderWeight();
   renderAnalytics();
   renderOverview();
-}
-
-/* ===== EXPORT — iOS Share Sheet + fallback ===== */
-async function exportData() {
-  saveAutoExport();
-  const data = collectExportData();
-  const json = JSON.stringify(data, null, 2);
-  const filename = `kk-calories-${new Date().toISOString().slice(0,10)}.json`;
-  if (navigator.canShare) {
-    try {
-      const file = new File([json], filename, { type: "application/json" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename });
-        renderExportRotation();
-        return;
-      }
-    } catch(e) {
-      if (e.name === "AbortError") { renderExportRotation(); return; }
-    }
-  }
-  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
-  const a = document.createElement("a");
-  a.href = dataUri;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  renderExportRotation();
-}
-
-async function downloadExport(dateStr) {
-  const json = localStorage.getItem("kk_export_" + dateStr);
-  if (!json) { alert("Nav saglabāta eksporta šai datumam."); return; }
-  const filename = "kk-calories-" + dateStr + ".json";
-  if (navigator.canShare) {
-    try {
-      const file = new File([json], filename, { type: "application/json" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename });
-        return;
-      }
-    } catch(e) {
-      if (e.name === "AbortError") return;
-    }
-  }
-  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(json);
-  const a = document.createElement("a");
-  a.href = dataUri;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-/* ===== END EXPORT ===== */
-
-function importDataFromFile(event) {
-  const file = event.target.files && event.target.files[0];
-  const status = document.getElementById("importStatus");
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      const invalid = Object.keys(data).filter(k => !(k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_")));
-      if (invalid.length) { alert("Import atteikts: " + invalid.join(", ")); return; }
-      Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-      if (status) status.textContent = "Import OK.";
-      alert("Import OK.");
-      event.target.value = "";
-      renderAll();
-    } catch { alert("Import kļūda."); }
-  };
-  reader.readAsText(file);
-}
-
-async function exportCSV() {
-  const rows = [["date","meal","food","kcal","protein","carbs","fat"]];
-  Object.keys(localStorage).filter(k => k.startsWith("foods_")).sort().forEach(k => {
-    const date = k.replace("foods_", "");
-    (JSON.parse(localStorage.getItem(k))||[]).forEach(f => rows.push([date, f.mealType||"", f.name, f.kcal, f.protein, f.carbs, f.fat]));
-  });
-  let csv = rows.map(r => r.join(",")).join("\n");
-
-  // Append products block
-  const products = getProducts();
-  if (products.length) {
-    csv += "\n###PRODUCTS###\n";
-    csv += "name,kcal,protein,carbs,fat\n";
-    products.forEach(p => {
-      const name = String(p.name||"").replace(/,/g, ";");
-      csv += `${name},${p.kcal||0},${p.protein||0},${p.carbs||0},${p.fat||0}\n`;
-    });
-  }
-
-  const filename = "kk-calories.csv";
-  if (navigator.canShare) {
-    try {
-      const file = new File([csv], filename, { type: "text/csv" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename });
-        return;
-      }
-    } catch(e) {
-      if (e.name === "AbortError") return;
-    }
-  }
-  const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-  const a = document.createElement("a");
-  a.href = dataUri; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function updateGauge(pct) {
@@ -837,7 +694,6 @@ function saveBmrSettings() {
 
 function renderSettings() {
   const s = getSettings();
-
   const genderEl = document.getElementById("setBmrGender");
   if (genderEl) genderEl.value = s.bmrGender || "male";
   const ageEl = document.getElementById("setBmrAge");
@@ -846,11 +702,9 @@ function renderSettings() {
   if (heightEl) heightEl.value = s.bmrHeight || "";
   const deficitEl = document.getElementById("setDeficit");
   if (deficitEl) deficitEl.value = s.deficit || 700;
-
   const bmr = calcBmr(s);
   const bmrEl = document.getElementById("bmrResult");
   if (bmrEl) bmrEl.textContent = `BMR: ${bmr} kcal/dienā (Mifflin-St Jeor)`;
-
   const actInput = document.getElementById("activityKcal");
   const actStatus = document.getElementById("activityStatus");
   const storedActivity = getActivityKcal();
@@ -864,7 +718,6 @@ function renderSettings() {
       actStatus.textContent = "Nav ievadīts — ievadi vakardienas aktivitāti";
     }
   }
-
   renderWeight();
   renderExportRotation();
 }
@@ -1016,22 +869,74 @@ function rdSaveRecipe() {
   showTab("recipes");
 }
 
-/* ===== AUTO EXPORT SYSTEM ===== */
+/* ===== FULL CSV EXPORT / IMPORT ===== */
 const MAX_STORED_EXPORTS = 3;
 
-function collectExportData() {
-  const data = {};
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith("foods_") || k.startsWith("kk_") || k === "weights" || k.startsWith("activity_"))
-      data[k] = localStorage.getItem(k);
+async function exportCSV() {
+  let csv = "";
+
+  csv += "###FOODS###\n";
+  csv += "date,meal,food,kcal,protein,carbs,fat\n";
+  Object.keys(localStorage).filter(k => k.startsWith("foods_")).sort().forEach(k => {
+    const date = k.replace("foods_", "");
+    (JSON.parse(localStorage.getItem(k))||[]).forEach(f => {
+      const name = String(f.name||"").replace(/,/g,";");
+      csv += `${date},${f.mealType||""},${name},${f.kcal||0},${f.protein||0},${f.carbs||0},${f.fat||0}\n`;
+    });
   });
-  return data;
+
+  csv += "###PRODUCTS###\n";
+  csv += "name,kcal,protein,carbs,fat\n";
+  getProducts().forEach(p => {
+    const name = String(p.name||"").replace(/,/g,";");
+    csv += `${name},${p.kcal||0},${p.protein||0},${p.carbs||0},${p.fat||0}\n`;
+  });
+
+  csv += "###WEIGHTS###\n";
+  csv += "date,weight\n";
+  (JSON.parse(localStorage.getItem("weights")||"[]")).forEach(w => {
+    csv += `${w.date},${w.weight}\n`;
+  });
+
+  csv += "###SETTINGS###\n";
+  csv += "key,value\n";
+  const s = getSettings();
+  Object.entries(s).forEach(([k,v]) => { csv += `${k},${v}\n`; });
+
+  csv += "###ACTIVITY###\n";
+  csv += "date,kcal\n";
+  Object.keys(localStorage).filter(k => k.startsWith("activity_")).sort().forEach(k => {
+    const date = k.replace("activity_","");
+    csv += `${date},${localStorage.getItem(k)}\n`;
+  });
+
+  csv += "###RECIPES###\n";
+  csv += JSON.stringify(getRecipes()) + "\n";
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  const filename = `kk-calories-${dateStr}.csv`;
+  saveAutoExportCSV(csv, dateStr);
+
+  if (navigator.canShare) {
+    try {
+      const file = new File([csv], filename, { type: "text/csv" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        renderExportRotation();
+        return;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") { renderExportRotation(); return; }
+    }
+  }
+  const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  const a = document.createElement("a");
+  a.href = dataUri; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  renderExportRotation();
 }
 
-function saveAutoExport() {
-  const data = collectExportData();
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const json = JSON.stringify(data);
+function saveAutoExportCSV(csv, dateStr) {
   let rotation = JSON.parse(localStorage.getItem("kk_export_rotation") || "[]");
   rotation = rotation.filter(e => e.date !== dateStr);
   rotation.push({ date: dateStr, ts: Date.now() });
@@ -1039,10 +944,135 @@ function saveAutoExport() {
     const oldest = rotation.shift();
     localStorage.removeItem("kk_export_" + oldest.date);
   }
-  localStorage.setItem("kk_export_" + dateStr, json);
+  localStorage.setItem("kk_export_" + dateStr, csv);
   localStorage.setItem("kk_export_rotation", JSON.stringify(rotation));
   localStorage.setItem("kk_last_export_date", dateStr);
-  return dateStr;
+}
+
+async function downloadExport(dateStr) {
+  const csv = localStorage.getItem("kk_export_" + dateStr);
+  if (!csv) { alert("Nav saglabāta eksporta šai datumam."); return; }
+  const filename = `kk-calories-${dateStr}.csv`;
+  if (navigator.canShare) {
+    try {
+      const file = new File([csv], filename, { type: "text/csv" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch(e) {
+      if (e.name === "AbortError") return;
+    }
+  }
+  const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  const a = document.createElement("a");
+  a.href = dataUri; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function importCsvFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  const status = document.getElementById("csvFileImportStatus");
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      importCsvRaw(e.target.result, status);
+      event.target.value = "";
+    } catch(err) {
+      if (status) status.textContent = "Kļūda: " + err.message;
+      alert("Import kļūda: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importCsvRaw(raw, statusEl) {
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+  const blocks = {};
+  let currentBlock = null;
+  raw.split(/\r?\n/).forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("###") && trimmed.endsWith("###")) {
+      currentBlock = trimmed.replace(/###/g,"");
+      blocks[currentBlock] = [];
+    } else if (currentBlock && trimmed) {
+      blocks[currentBlock].push(trimmed);
+    }
+  });
+
+  let stats = [];
+
+  if (blocks.FOODS && blocks.FOODS.length > 1) {
+    const header = blocks.FOODS[0].split(",").map(x=>x.trim().toLowerCase());
+    const di=header.indexOf("date"), mi=header.indexOf("meal"), fi=header.indexOf("food"),
+          ki=header.indexOf("kcal"), pi=header.indexOf("protein"), ci=header.indexOf("carbs"), ti=header.indexOf("fat");
+    const byDate = {};
+    blocks.FOODS.slice(1).forEach(line => {
+      const c = line.split(",").map(x=>x.trim());
+      const date = c[di]; if (!date) return;
+      if (!byDate[date]) byDate[date] = [];
+      byDate[date].push({ id: Date.now()+Math.random(), name: c[fi], kcal: num(c[ki]), protein: num(c[pi]), carbs: num(c[ci]), fat: num(c[ti]), mealType: c[mi]||"snack" });
+    });
+    Object.entries(byDate).forEach(([date, foods]) => localStorage.setItem("foods_"+date, JSON.stringify(foods)));
+    stats.push(`Ēdieni: ${Object.keys(byDate).length} dienas`);
+  }
+
+  if (blocks.PRODUCTS && blocks.PRODUCTS.length > 1) {
+    const header = blocks.PRODUCTS[0].split(",").map(x=>x.trim().toLowerCase());
+    const ni=header.indexOf("name"), ki=header.indexOf("kcal"), pi=header.indexOf("protein"), ci=header.indexOf("carbs"), ti=header.indexOf("fat");
+    const products = [];
+    blocks.PRODUCTS.slice(1).forEach(line => {
+      const c = line.split(",").map(x=>x.trim());
+      const name = c[ni]; if (!name) return;
+      products.push({ id: Date.now()+Math.floor(Math.random()*10000), name, kcal: num(c[ki]), protein: num(c[pi]), carbs: num(c[ci]), fat: num(c[ti]), favorite: false });
+    });
+    saveProducts(products);
+    stats.push(`Produkti: ${products.length}`);
+  }
+
+  if (blocks.WEIGHTS && blocks.WEIGHTS.length > 1) {
+    const weights = blocks.WEIGHTS.slice(1).map(line => {
+      const [date, weight] = line.split(",");
+      return { date: date.trim(), weight: num(weight) };
+    }).filter(w => w.date && w.weight);
+    localStorage.setItem("weights", JSON.stringify(weights));
+    stats.push(`Svars: ${weights.length} ieraksti`);
+  }
+
+  if (blocks.SETTINGS && blocks.SETTINGS.length > 1) {
+    const s = getSettings();
+    blocks.SETTINGS.slice(1).forEach(line => {
+      const idx = line.indexOf(",");
+      if (idx < 0) return;
+      const key = line.slice(0,idx).trim();
+      const val = line.slice(idx+1).trim();
+      if (key) s[key] = isNaN(val) || val === "" ? val : Number(val);
+    });
+    saveSettingsData(s);
+    stats.push("Iestatījumi: OK");
+  }
+
+  if (blocks.ACTIVITY && blocks.ACTIVITY.length > 1) {
+    blocks.ACTIVITY.slice(1).forEach(line => {
+      const [date, kcal] = line.split(",");
+      if (date && kcal) localStorage.setItem("activity_"+date.trim(), kcal.trim());
+    });
+    stats.push(`Aktivitātes: ${blocks.ACTIVITY.length-1}`);
+  }
+
+  if (blocks.RECIPES && blocks.RECIPES.length > 0) {
+    try {
+      const recipes = JSON.parse(blocks.RECIPES[0]);
+      saveRecipes(recipes);
+      stats.push(`Receptes: ${recipes.length}`);
+    } catch {}
+  }
+
+  const msg = "Import OK. " + stats.join(", ");
+  setStatus(msg);
+  alert(msg);
+  renderAll();
 }
 
 function checkAutoExportPrompt() {
@@ -1118,7 +1148,7 @@ function renderAll() {
 function render() { renderAll(); }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js?v=10.12");
+  navigator.serviceWorker.register("service-worker.js?v=10.13");
 }
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10.12" />
+  <link rel="stylesheet" href="style.css?v=10.13" />
   <link rel="manifest" href="manifest.json?v=9.6" />
   <meta name="theme-color" content="#f8f7f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -165,12 +165,9 @@
         <p id="barcodeStatus" class="muted-text"></p>
       </div>
       <div class="section-card">
-        <h2>CSV imports</h2>
-        <p class="muted-text small-text">Importē CSV failu (ar produktu DB) vai ielīmē manuāli</p>
-        <input id="importCsvFile" type="file" accept=".csv" onchange="importCsvFromFile(event)" style="display:none;" />
-        <button class="btn-secondary full-width" onclick="document.getElementById('importCsvFile').click()">📂 Import CSV fails</button>
-        <p id="csvFileImportStatus" class="muted-text"></p>
-        <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Banāns,89,1.1,23,0.3" style="margin-top:8px"></textarea>
+        <h2>CSV imports (produkti)</h2>
+        <p class="muted-text small-text">Kolonnas: name,kcal,protein,carbs,fat</p>
+        <textarea id="csvImportBox" placeholder="name,kcal,protein,carbs,fat&#10;Banāns,89,1.1,23,0.3"></textarea>
         <button class="btn-secondary full-width" onclick="importProductsCSV()">Importēt no teksta</button>
         <div id="csvImportStatus" class="status-msg"></div>
       </div>
@@ -281,6 +278,7 @@
       <button class="back-btn" onclick="showTab('overview')">←</button>
       <div class="top-bar-right"><p class="top-label">Konfigurācija</p><h1>Iestatījumi</h1></div>
       </header>
+
       <div class="section-card">
         <h2>Svars</h2>
         <div class="field-row">
@@ -316,13 +314,23 @@
       </div>
 
       <div class="section-card">
-        <h2>Datu eksports</h2>
-        <button class="btn-secondary full-width" onclick="exportCSV()">📤 Export CSV</button>
+        <h2>Datu eksports / imports</h2>
+        <p class="muted-text small-text">Pilns backup — ēdieni, produkti, svars, iestatījumi, receptes</p>
+        <button class="btn-primary full-width" onclick="exportCSV()">📤 Export CSV (pilns)</button>
+        <input id="importCsvFile" type="file" accept=".csv" onchange="importCsvFromFile(event)" style="display:none;" />
+        <button class="btn-ghost full-width" style="margin-top:6px" onclick="document.getElementById('importCsvFile').click()">📂 Import CSV (pilns)</button>
+        <p id="csvFileImportStatus" class="muted-text"></p>
+      </div>
+
+      <div class="section-card">
+        <h2>Saglabātie eksporti (pēdējie 3)</h2>
+        <p class="muted-text small-text">Automātisks eksports katru vakaru plkst. 21:00</p>
+        <div id="exportRotationList"></div>
       </div>
 
     </section>
 
   </main>
-  <script src="app.js?v=10.12"></script>
+  <script src="app.js?v=10.13"></script>
 </body>
 </html>
